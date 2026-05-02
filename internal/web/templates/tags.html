@@ -1,0 +1,22 @@
+{{define "content"}}
+<div class="toolbar">
+  <h1>Tags</h1>
+  <span class="spacer"></span>
+</div>
+
+{{if not .Tags}}
+  <div class="empty">No tags yet.</div>
+{{else}}
+<table class="compact">
+  <thead><tr><th>Tag</th><th>Resources</th></tr></thead>
+  <tbody>
+  {{range .Tags}}
+    <tr>
+      <td><a href="/resources?tag={{.Name}}">{{.Name}}</a></td>
+      <td>{{.ResourceCount}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

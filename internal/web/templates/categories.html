@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="toolbar">
+  <h1>Categories</h1>
+  <span class="spacer"></span>
+</div>
+
+{{if not .Categories}}
+  <div class="empty">No categories yet.</div>
+{{else}}
+<table class="compact">
+  <thead><tr><th>Sort</th><th>Slug</th><th>Icon</th><th>Name</th><th>Active</th></tr></thead>
+  <tbody>
+  {{range .Categories}}
+    <tr>
+      <td>{{.SortOrder}}</td>
+      <td><a href="/resources?cat={{.Slug}}">{{.Slug}}</a></td>
+      <td>{{.Icon}}</td>
+      <td>{{.Name}}</td>
+      <td>{{.ResourceCount}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

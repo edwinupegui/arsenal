@@ -59,6 +59,7 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newCatCmd())
 	root.AddCommand(newTagCmd())
 	root.AddCommand(newTUICmd())
+	root.AddCommand(newWebCmd())
 
 	return root.ExecuteContext(context.Background())
 }

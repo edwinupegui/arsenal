@@ -1,0 +1,33 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} — Arsenal</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a href="/resources" class="logo">⚔ Arsenal</a>
+    <nav>
+      <a href="/resources" class="{{if eq .Nav "resources"}}active{{end}}">Resources</a>
+      <a href="/categories" class="{{if eq .Nav "categories"}}active{{end}}">Categories</a>
+      <a href="/tags" class="{{if eq .Nav "tags"}}active{{end}}">Tags</a>
+      <a href="/trash" class="{{if eq .Nav "trash"}}active{{end}}">Trash</a>
+    </nav>
+    <form class="search" action="/search" method="get" role="search">
+      <input type="search" name="q" placeholder="Search title, description, tags…" value="{{.Query}}">
+    </form>
+  </header>
+
+  <main>
+    {{if .Flash.Message}}<div class="flash flash-{{.Flash.Type}}">{{.Flash.Message}}</div>{{end}}
+    {{block "content" .}}{{end}}
+  </main>
+
+  <footer class="app-footer">
+    Arsenal local · <a href="https://github.com/edwinupegui/arsenal" target="_blank" rel="noopener">github</a> · {{.Counts.Active}} active · {{.Counts.Trashed}} trashed
+  </footer>
+</body>
+</html>{{end}}

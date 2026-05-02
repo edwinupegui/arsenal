@@ -1,0 +1,75 @@
+{{define "content"}}
+<div class="toolbar">
+  <a class="btn" href="{{.CancelURL}}">← Cancel</a>
+  <span class="spacer"></span>
+</div>
+
+<article class="detail">
+  <h1>{{.Title}}</h1>
+  {{if .FormError}}<div class="flash flash-danger">{{.FormError}}</div>{{end}}
+
+  <form class="resource-form" method="post" action="{{.Action}}">
+    <fieldset>
+      <label for="title">Title</label>
+      <input id="title" name="title" required value="{{.Form.Title}}">
+    </fieldset>
+
+    <fieldset>
+      <label for="url">URL</label>
+      <input id="url" name="url" type="url" required value="{{.Form.URL}}">
+    </fieldset>
+
+    <fieldset class="row">
+      <div>
+        <label for="type">Type</label>
+        <select id="type" name="type">
+          {{range .Types}}
+            <option value="{{.}}" {{if eq . $.Form.Type}}selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label for="language">Language</label>
+        <select id="language" name="language">
+          {{range .Languages}}
+            <option value="{{.}}" {{if eq . $.Form.Language}}selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">— uncategorized —</option>
+          {{range .Categories}}
+            <option value="{{.Slug}}" {{if eq .Slug $.Form.Category}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        </select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label for="tags">Tags (comma separated)</label>
+      <input id="tags" name="tags" value="{{.Form.Tags}}" placeholder="architecture, patterns, golang">
+    </fieldset>
+
+    <fieldset>
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3">{{.Form.Description}}</textarea>
+    </fieldset>
+
+    <fieldset>
+      <label for="notes">Notes (markdown ok)</label>
+      <textarea id="notes" name="notes" rows="4">{{.Form.Notes}}</textarea>
+    </fieldset>
+
+    <fieldset>
+      <label><input type="checkbox" name="favorite" value="1" {{if .Form.Favorite}}checked{{end}}> Mark as favorite</label>
+    </fieldset>
+
+    <div class="actions">
+      <a class="btn" href="{{.CancelURL}}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{{.SubmitLabel}}</button>
+    </div>
+  </form>
+</article>
+{{end}}

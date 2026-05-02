@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="toolbar">
+  <a class="btn" href="/resources">← Back</a>
+  <span class="spacer"></span>
+  <a class="btn" href="/resources/{{.Resource.ID}}/edit">Edit</a>
+  {{if .Resource.Trashed}}
+    <form method="post" action="/resources/{{.Resource.ID}}/restore" style="display:inline">
+      <button class="btn">Restore</button>
+    </form>
+  {{else}}
+    <form method="post" action="/resources/{{.Resource.ID}}/delete"
+          onsubmit="return confirm('Move to trash?')" style="display:inline">
+      <button class="btn btn-danger">Move to trash</button>
+    </form>
+  {{end}}
+</div>
+
+<article class="detail">
+  <h1>
+    {{if .Resource.Favorite}}★ {{end}}{{.Resource.Title}}
+  </h1>
+  <p>
+    <a href="{{.Resource.URL}}" target="_blank" rel="noopener">{{.Resource.URL}} ↗</a>
+  </p>
+  <dl>
+    <dt>Type</dt><dd><span class="badge type">{{.Resource.Type}}</span></dd>
+    <dt>Language</dt><dd><span class="badge lang">{{.Resource.Language}}</span></dd>
+    <dt>Category</dt><dd>
+      {{if .Resource.CategorySlug}}
+        <a href="/resources?cat={{.Resource.CategorySlug}}">{{.Resource.CategoryName}}</a>
+      {{else}}—{{end}}
+    </dd>
+    <dt>Tags</dt><dd>
+      {{if .Resource.Tags}}
+        {{range .Resource.Tags}}<a class="tag" href="/resources?tag={{.}}">{{.}}</a> {{end}}
+      {{else}}—{{end}}
+    </dd>
+    <dt>Created</dt><dd>{{.Resource.CreatedAt}}</dd>
+    <dt>Updated</dt><dd>{{.Resource.UpdatedAt}}</dd>
+    {{if .Resource.Trashed}}<dt>Trashed</dt><dd>{{.Resource.DeletedAt}}</dd>{{end}}
+  </dl>
+
+  {{if .Resource.Description}}
+    <h2>Description</h2>
+    <div class="body">{{.Resource.Description}}</div>
+  {{end}}
+  {{if .Resource.Notes}}
+    <h2>Notes</h2>
+    <div class="body">{{.Resource.Notes}}</div>
+  {{end}}
+</article>
+{{end}}

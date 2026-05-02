@@ -1,0 +1,72 @@
+{{define "content"}}
+<div class="toolbar">
+  <h1>{{.Title}}</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/resources/new">+ Add resource</a>
+</div>
+
+{{if .Filter.Active}}
+<div class="toolbar">
+  <span class="tag">Filter:</span>
+  {{if .Filter.Cat}}<span class="badge">cat:{{.Filter.Cat}}</span>{{end}}
+  {{if .Filter.Tag}}<span class="badge">tag:{{.Filter.Tag}}</span>{{end}}
+  {{if .Filter.Type}}<span class="badge type">type:{{.Filter.Type}}</span>{{end}}
+  {{if .Filter.Lang}}<span class="badge lang">lang:{{.Filter.Lang}}</span>{{end}}
+  {{if .Filter.Fav}}<span class="badge">★ favorites</span>{{end}}
+  <a href="/resources" class="btn">clear</a>
+</div>
+{{end}}
+
+{{if not .Resources}}
+  <div class="empty">No resources match. <a href="/resources/new">Add the first one →</a></div>
+{{else}}
+<div class="grid">
+  {{range .Resources}}
+    {{template "card" .}}
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "card"}}
+<article class="card" id="card-{{.ID}}">
+  <div class="title-row">
+    <a href="/resources/{{.ID}}">{{.Title}}</a>
+    <button
+      class="star {{if .Favorite}}is-fav{{end}}"
+      hx-post="/resources/{{.ID}}/star"
+      hx-target="#card-{{.ID}}"
+      hx-swap="outerHTML"
+      title="{{if .Favorite}}Unstar{{else}}Star{{end}}">★</button>
+  </div>
+
+  {{if .Description}}<p class="description">{{.Description}}</p>{{end}}
+
+  <div class="meta">
+    <span class="badge type">{{.Type}}</span>
+    <span class="badge lang">{{.Language}}</span>
+    {{if .CategorySlug}}<span class="badge"><a href="/resources?cat={{.CategorySlug}}">{{.CategorySlug}}</a></span>{{end}}
+    {{range .Tags}}<a class="tag" href="/resources?tag={{.}}">{{.}}</a>{{end}}
+  </div>
+
+  <div class="footer">
+    <a href="{{.URL}}" target="_blank" rel="noopener">open ↗</a>
+    <a href="/resources/{{.ID}}/edit">edit</a>
+    {{if .Trashed}}
+      <form method="post" action="/resources/{{.ID}}/restore" style="display:inline">
+        <button class="btn">restore</button>
+      </form>
+    {{else}}
+      <form method="post" action="/resources/{{.ID}}/delete"
+            hx-post="/resources/{{.ID}}/delete"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            onsubmit="return confirm('Move to trash?')"
+            style="display:inline">
+        <button class="btn btn-danger">delete</button>
+      </form>
+    {{end}}
+    <span style="margin-left:auto">#{{.ID}}</span>
+  </div>
+</article>
+{{end}}
