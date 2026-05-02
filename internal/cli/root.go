@@ -33,13 +33,15 @@ func Execute(fsys embed.FS) error {
 		Short:         "Local-first manager for your curated technical resources",
 		Long:          "Arsenal — manage videos, articles, repos, tools and more in a single local SQLite database, via TUI, command line, or a localhost web UI.",
 		SilenceUsage:  true,
-		SilenceErrors: false,
+		SilenceErrors: true,
 		Version:       fmt.Sprintf("%s (commit %s, built %s)", Version, Commit, Date),
 	}
 
 	root.AddCommand(newVersionCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newMigrateCmd())
+	root.AddCommand(newListCmd())
+	root.AddCommand(newShowCmd())
 
 	return root.ExecuteContext(context.Background())
 }
