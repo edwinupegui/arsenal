@@ -25,6 +25,7 @@ type Querier interface {
 	GetResourceByURL(ctx context.Context, url string) (Resource, error)
 	GetTagByName(ctx context.Context, name string) (Tag, error)
 	ListCategories(ctx context.Context) ([]Category, error)
+	ListCategoriesWithCounts(ctx context.Context) ([]ListCategoriesWithCountsRow, error)
 	ListResources(ctx context.Context, arg ListResourcesParams) ([]Resource, error)
 	ListTags(ctx context.Context) ([]ListTagsRow, error)
 	ListTagsForResource(ctx context.Context, resourceID int64) ([]Tag, error)

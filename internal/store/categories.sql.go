@@ -116,6 +116,56 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 	return items, nil
 }
 
+const listCategoriesWithCounts = `-- name: ListCategoriesWithCounts :many
+SELECT
+    c.id, c.slug, c.name, c.icon, c.sort_order,
+    COUNT(r.id) AS resource_count
+FROM categories c
+LEFT JOIN resources r
+    ON r.category_id = c.id AND r.deleted_at IS NULL
+GROUP BY c.id
+ORDER BY c.sort_order ASC, c.name ASC
+`
+
+type ListCategoriesWithCountsRow struct {
+	ID            int64  `json:"id"`
+	Slug          string `json:"slug"`
+	Name          string `json:"name"`
+	Icon          string `json:"icon"`
+	SortOrder     int64  `json:"sort_order"`
+	ResourceCount int64  `json:"resource_count"`
+}
+
+func (q *Queries) ListCategoriesWithCounts(ctx context.Context) ([]ListCategoriesWithCountsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCategoriesWithCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCategoriesWithCountsRow{}
+	for rows.Next() {
+		var i ListCategoriesWithCountsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Icon,
+			&i.SortOrder,
+			&i.ResourceCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE categories
 SET slug = ?, name = ?, icon = ?, sort_order = ?
