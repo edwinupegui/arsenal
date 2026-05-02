@@ -42,6 +42,13 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newMigrateCmd())
 	root.AddCommand(newListCmd())
 	root.AddCommand(newShowCmd())
+	root.AddCommand(newSearchCmd())
+	root.AddCommand(newRmCmd())
+	root.AddCommand(newRestoreCmd())
+	root.AddCommand(newPurgeCmd())
+	root.AddCommand(newTrashCmd())
+	root.AddCommand(newStarCmd())
+	root.AddCommand(newUnstarCmd())
 
 	return root.ExecuteContext(context.Background())
 }

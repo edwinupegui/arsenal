@@ -6,21 +6,34 @@ import (
 	"strings"
 )
 
-// SearchResources runs a full-text search over title/description/notes/tags using FTS5.
-// The query is sanitized: each whitespace-separated term is wrapped in quotes,
-// suffixed with `*` so it matches as a prefix, and joined with implicit AND.
-// Soft-deleted resources are excluded.
-func (q *Queries) SearchResources(ctx context.Context, query string, limit int64) ([]Resource, error) {
+// SearchResources runs a full-text search over title/description/notes/tags
+// using FTS5 and returns results enriched with category info and aggregated
+// tags, matching the shape produced by ListResourcesFiltered. Soft-deleted
+// resources are excluded.
+//
+// Query handling: the user-typed string is split on whitespace, each term is
+// stripped of FTS5 syntax characters and wrapped as a prefix ("term"*), then
+// joined with implicit AND. An empty query returns an empty result set
+// instead of an error so the CLI can render "no matches".
+func (q *Queries) SearchResources(ctx context.Context, query string, limit int64) ([]ListedResource, error) {
 	match := buildFTSQuery(query)
 	if match == "" {
-		return []Resource{}, nil
+		return []ListedResource{}, nil
 	}
 
 	const stmt = `
 SELECT r.id, r.title, r.url, r.description, r.type, r.language,
-       r.category_id, r.notes, r.favorite, r.created_at, r.updated_at, r.deleted_at
+       r.category_id, r.notes, r.favorite, r.created_at, r.updated_at, r.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(t.name, ','), '')
+         FROM resource_tags rt
+         JOIN tags t ON t.id = rt.tag_id
+         WHERE rt.resource_id = r.id
+       ) AS tag_csv
 FROM resources_fts f
 JOIN resources r ON r.id = f.rowid
+LEFT JOIN categories c ON c.id = r.category_id
 WHERE resources_fts MATCH ?
   AND r.deleted_at IS NULL
 ORDER BY rank
@@ -32,16 +45,24 @@ LIMIT ?`
 	}
 	defer rows.Close()
 
-	var out []Resource
+	var out []ListedResource
 	for rows.Next() {
-		var r Resource
+		var lr ListedResource
+		var tagCSV string
 		if err := rows.Scan(
-			&r.ID, &r.Title, &r.Url, &r.Description, &r.Type, &r.Language,
-			&r.CategoryID, &r.Notes, &r.Favorite, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
+			&lr.Resource.ID, &lr.Resource.Title, &lr.Resource.Url,
+			&lr.Resource.Description, &lr.Resource.Type, &lr.Resource.Language,
+			&lr.Resource.CategoryID, &lr.Resource.Notes, &lr.Resource.Favorite,
+			&lr.Resource.CreatedAt, &lr.Resource.UpdatedAt, &lr.Resource.DeletedAt,
+			&lr.CategoryName, &lr.CategorySlug,
+			&tagCSV,
 		); err != nil {
 			return nil, fmt.Errorf("fts scan: %w", err)
 		}
-		out = append(out, r)
+		if tagCSV != "" {
+			lr.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lr)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("fts iterate: %w", err)
