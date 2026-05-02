@@ -63,13 +63,16 @@ func (h *Handlers) listResources(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	vms := toVMs(rows)
 	data := struct {
 		pageData
 		Resources []resourceVM
+		Groups    []typeGroupVM
 		Filter    listFilterVM
 	}{
 		pageData:  h.commonPage(r, "Resources", "resources"),
-		Resources: toVMs(rows),
+		Resources: vms,
+		Groups:    groupByType(vms),
 		Filter: listFilterVM{
 			Cat: filter.CategorySlug, Tag: filter.TagName,
 			Type: filter.Type, Lang: filter.Language, Fav: filter.OnlyFavorite,
@@ -91,13 +94,16 @@ func (h *Handlers) trashList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	vms := toVMs(rows)
 	data := struct {
 		pageData
 		Resources []resourceVM
+		Groups    []typeGroupVM
 		Filter    listFilterVM
 	}{
 		pageData:  h.commonPage(r, "Trash", "trash"),
-		Resources: toVMs(rows),
+		Resources: vms,
+		Groups:    groupByType(vms),
 	}
 	render(w, "list", data)
 }
@@ -113,13 +119,16 @@ func (h *Handlers) searchResources(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	vms := toVMs(rows)
 	data := struct {
 		pageData
 		Resources []resourceVM
+		Groups    []typeGroupVM
 		Filter    listFilterVM
 	}{
 		pageData:  h.commonPage(r, fmt.Sprintf("Search: %s", q), "resources"),
-		Resources: toVMs(rows),
+		Resources: vms,
+		Groups:    groupByType(vms),
 	}
 	render(w, "list", data)
 }
@@ -348,6 +357,24 @@ func (h *Handlers) softDeleteResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/resources", http.StatusSeeOther)
+}
+
+func (h *Handlers) purgeResource(w http.ResponseWriter, r *http.Request) {
+	id, err := chiID(r)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := h.service.Purge(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if isHTMX(r) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(""))
+		return
+	}
+	http.Redirect(w, r, "/trash", http.StatusSeeOther)
 }
 
 func (h *Handlers) restoreResource(w http.ResponseWriter, r *http.Request) {

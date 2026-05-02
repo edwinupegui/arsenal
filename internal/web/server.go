@@ -71,6 +71,7 @@ func New(db *sql.DB, opts Options) *Server {
 
 	r.Post("/resources/{id}/delete", h.softDeleteResource)
 	r.Post("/resources/{id}/restore", h.restoreResource)
+	r.Post("/resources/{id}/purge", h.purgeResource)
 	r.Post("/resources/{id}/star", h.toggleStar)
 
 	// --- search / trash ---

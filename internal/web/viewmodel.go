@@ -1,8 +1,10 @@
 package web
 
 import (
+	"sort"
 	"strings"
 
+	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/store"
 )
 
@@ -63,6 +65,57 @@ func toVMs(rows []store.ListedResource) []resourceVM {
 	for _, r := range rows {
 		out = append(out, toVM(r))
 	}
+	return out
+}
+
+// typeGroupVM groups resources sharing the same Type so the list view can
+// render a header per group. Empty groups are filtered out by groupByType.
+type typeGroupVM struct {
+	Type      string
+	Resources []resourceVM
+}
+
+// groupByType buckets vms by their Type field. Groups are returned sorted
+// ascending by resource count (fewest first); ties broken by type name in
+// canonical declaration order from domain.AllResourceTypes(), with unknown /
+// blank types falling through alphabetically.
+func groupByType(vms []resourceVM) []typeGroupVM {
+	if len(vms) == 0 {
+		return nil
+	}
+	buckets := make(map[string][]resourceVM, len(domain.AllResourceTypes())+1)
+	for _, vm := range vms {
+		buckets[vm.Type] = append(buckets[vm.Type], vm)
+	}
+	rank := make(map[string]int, len(domain.AllResourceTypes()))
+	for i, t := range domain.AllResourceTypes() {
+		rank[string(t)] = i
+	}
+	out := make([]typeGroupVM, 0, len(buckets))
+	for k, rs := range buckets {
+		label := k
+		if label == "" {
+			label = "untyped"
+		}
+		out = append(out, typeGroupVM{Type: label, Resources: rs})
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if len(out[i].Resources) != len(out[j].Resources) {
+			return len(out[i].Resources) < len(out[j].Resources)
+		}
+		ri, oki := rank[out[i].Type]
+		rj, okj := rank[out[j].Type]
+		switch {
+		case oki && okj:
+			return ri < rj
+		case oki:
+			return true
+		case okj:
+			return false
+		default:
+			return out[i].Type < out[j].Type
+		}
+	})
 	return out
 }
 

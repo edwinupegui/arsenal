@@ -7,6 +7,11 @@
     <form method="post" action="/resources/{{.Resource.ID}}/restore" style="display:inline">
       <button class="btn">Restore</button>
     </form>
+    <form method="post" action="/resources/{{.Resource.ID}}/purge"
+          onsubmit="return confirm('Permanently delete? This cannot be undone.')"
+          style="display:inline">
+      <button class="btn btn-danger">Delete forever</button>
+    </form>
   {{else}}
     <form method="post" action="/resources/{{.Resource.ID}}/delete"
           onsubmit="return confirm('Move to trash?')" style="display:inline">
