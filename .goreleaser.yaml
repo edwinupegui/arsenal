@@ -1,0 +1,66 @@
+version: 2
+
+project_name: arsenal
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: arsenal
+    main: ./cmd/arsenal
+    binary: arsenal
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/edwinupegui/arsenal/internal/cli.Version={{.Version}}
+      - -X github.com/edwinupegui/arsenal/internal/cli.Commit={{.ShortCommit}}
+      - -X github.com/edwinupegui/arsenal/internal/cli.Date={{.Date}}
+
+archives:
+  - id: arsenal
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore"
+      - "^docs"
+      - "^test"
+
+release:
+  draft: false
+  prerelease: auto
+
+# Homebrew tap publication will be enabled in M4 once the tap repo is created.
+# brews:
+#   - name: arsenal
+#     repository:
+#       owner: edwinupegui
+#       name: homebrew-tap
+#     homepage: https://github.com/edwinupegui/arsenal
+#     description: Local-first manager for curated technical resources
+#     license: MIT

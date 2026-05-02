@@ -1,0 +1,27 @@
+# Binaries
+/arsenal
+/bin/
+/dist/
+
+# Test coverage
+*.out
+coverage.html
+
+# Local DB and dev artifacts
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Env
+.env
+.env.local
+
+# Tools cache
+.tools/
