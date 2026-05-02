@@ -55,12 +55,29 @@ release:
   draft: false
   prerelease: auto
 
-# Homebrew tap publication will be enabled in M4 once the tap repo is created.
-# brews:
-#   - name: arsenal
-#     repository:
-#       owner: edwinupegui
-#       name: homebrew-tap
-#     homepage: https://github.com/edwinupegui/arsenal
-#     description: Local-first manager for curated technical resources
-#     license: MIT
+# Homebrew tap publication. Requires:
+#   1. A repo at github.com/edwinupegui/homebrew-tap (create it once, empty
+#      is fine — GoReleaser will commit the formula on the first release).
+#   2. A GitHub PAT with `repo` scope exposed to the workflow as
+#      HOMEBREW_TAP_GITHUB_TOKEN (the default GITHUB_TOKEN cannot push to a
+#      different repository).
+brews:
+  - name: arsenal
+    repository:
+      owner: edwinupegui
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/edwinupegui/arsenal
+    description: Local-first manager for curated technical resources (CLI + TUI + web)
+    license: MIT
+    install: |
+      bin.install "arsenal"
+      generate_completions_from_executable(bin/"arsenal", "completion")
+    test: |
+      system "#{bin}/arsenal", "version"
+    commit_author:
+      name: arsenal-release-bot
+      email: noreply@github.com
+    commit_msg_template: "chore(formula): bump arsenal to {{ .Tag }}"

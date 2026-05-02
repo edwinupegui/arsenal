@@ -64,6 +64,8 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newExportCmd())
 	root.AddCommand(newImportCmd())
 
+	wireCompletions(root)
+
 	return root.ExecuteContext(context.Background())
 }
 

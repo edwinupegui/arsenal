@@ -65,3 +65,16 @@ install-tools: ## Install dev tools to $GOPATH/bin
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install github.com/goreleaser/goreleaser@latest
 	go install golang.org/x/tools/cmd/goimports@latest
+
+release-check: ## Validate the GoReleaser config without building
+	$(GORELEASER) check
+
+release-snapshot: ## Local end-to-end release build into ./dist (no publish)
+	$(GORELEASER) release --snapshot --clean --skip=publish
+
+completions: build ## Emit shell completion scripts under ./dist/completions
+	mkdir -p dist/completions
+	./$(BIN) completion bash > dist/completions/arsenal.bash
+	./$(BIN) completion zsh  > dist/completions/_arsenal
+	./$(BIN) completion fish > dist/completions/arsenal.fish
+	@echo "completions written to dist/completions/"

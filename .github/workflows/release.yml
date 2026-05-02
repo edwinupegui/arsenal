@@ -24,4 +24,8 @@ jobs:
           version: latest
           args: release --clean
         env:
+          # GITHUB_TOKEN cannot push to the tap repo — that's a different
+          # repository. HOMEBREW_TAP_GITHUB_TOKEN must be a PAT with `repo`
+          # scope on edwinupegui/homebrew-tap, set as a repo secret.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
