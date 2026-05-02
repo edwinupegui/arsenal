@@ -38,8 +38,8 @@ type Report struct {
 
 // Options controls the import.
 type Options struct {
-	SourcePath string  // path to the legacy resources.db
-	DryRun     bool    // if true, opens a tx and rolls it back
+	SourcePath string // path to the legacy resources.db
+	DryRun     bool   // if true, opens a tx and rolls it back
 	Service    *resources.Service
 	Queries    *store.Queries // for category writes / lookups outside the service
 }

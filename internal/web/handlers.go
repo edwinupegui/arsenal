@@ -127,7 +127,7 @@ func (h *Handlers) searchResources(w http.ResponseWriter, r *http.Request) {
 // --- detail ------------------------------------------------------------------
 
 func (h *Handlers) showResource(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -221,7 +221,7 @@ func (h *Handlers) createResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) editResourceForm(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -262,7 +262,7 @@ func (h *Handlers) editResourceForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) updateResource(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -332,7 +332,7 @@ func (h *Handlers) renderForm(w http.ResponseWriter, r *http.Request, form formV
 // --- mutations: delete / restore / star -------------------------------------
 
 func (h *Handlers) softDeleteResource(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -351,7 +351,7 @@ func (h *Handlers) softDeleteResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) restoreResource(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -364,7 +364,7 @@ func (h *Handlers) restoreResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) toggleStar(w http.ResponseWriter, r *http.Request) {
-	id, err := chiInt64(r, "id")
+	id, err := chiID(r)
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
@@ -448,8 +448,11 @@ func (h *Handlers) listTags(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers -----------------------------------------------------------------
 
-func chiInt64(r *http.Request, name string) (int64, error) {
-	return strconv.ParseInt(chi.URLParam(r, name), 10, 64)
+// chiID parses the {id} URL parameter as an int64. Every handler that
+// takes a positional resource id reaches for this exact lookup, so
+// hard-coding the parameter name keeps the call sites tiny.
+func chiID(r *http.Request) (int64, error) {
+	return strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 }
 
 func nullStr(s sql.NullString) string {

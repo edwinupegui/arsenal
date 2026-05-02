@@ -17,9 +17,9 @@ import (
 // LAN address would be a footgun. Power users can override with --host.
 func newWebCmd() *cobra.Command {
 	var (
-		host    string
-		port    int
-		noOpen  bool
+		host   string
+		port   int
+		noOpen bool
 	)
 	cmd := &cobra.Command{
 		Use:   "web",

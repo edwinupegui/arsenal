@@ -38,11 +38,11 @@ type App struct {
 	queries *store.Queries
 	service *resources.Service
 
-	keys      keyMap
-	list      list.Model
-	detail    detailModel
-	confirm   confirmModel
-	searchIn  textinput.Model
+	keys         keyMap
+	list         list.Model
+	detail       detailModel
+	confirm      confirmModel
+	searchIn     textinput.Model
 	searchActive string // "" → showing default list; non-empty → search results
 
 	width, height int
@@ -293,7 +293,7 @@ func (a App) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, softDeleteCmd(a.service, id, a.confirm.title)
 		case "n", "N", "esc":
 			a.state = viewList
-			a.statusMsg = "cancelled"
+			a.statusMsg = "canceled"
 			return a, nil
 		}
 	}
@@ -468,4 +468,3 @@ func (c confirmModel) view(width, height int) string {
 		Render(c.prompt + "\n\n" + mutedStyle.Render("[y] yes   [n] no / esc"))
 	return lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center, box)
 }
-

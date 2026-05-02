@@ -169,4 +169,3 @@ func countResourcesInCategory(ctx context.Context, db *sql.DB, catID int64) (int
 	).Scan(&n)
 	return n, err
 }
-

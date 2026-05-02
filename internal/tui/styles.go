@@ -25,7 +25,6 @@ var (
 	keyStyle   = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 
 	statusOKStyle    = lipgloss.NewStyle().Foreground(colorOK)
-	statusWarnStyle  = lipgloss.NewStyle().Foreground(colorWarning)
 	statusErrorStyle = lipgloss.NewStyle().Foreground(colorDanger).Bold(true)
 
 	detailLabelStyle = lipgloss.NewStyle().Foreground(colorAccent).Width(12).Bold(true)

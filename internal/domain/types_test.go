@@ -15,12 +15,12 @@ func TestNormalizeTag(t *testing.T) {
 		wantErr error
 	}{
 		{"  Architecture  ", "architecture", nil},
-		{"Clean  Code", "clean code", nil},                          // collapses inner whitespace
-		{"PATTERNS", "patterns", nil},                               // lowercases
-		{"   ", "", domain.ErrEmptyTag},                              // pure whitespace
-		{"", "", domain.ErrEmptyTag},                                 // empty
-		{"\t\n", "", domain.ErrEmptyTag},                             // weird whitespace
-		{"go", "go", nil},                                            // short ok
+		{"Clean  Code", "clean code", nil}, // collapses inner whitespace
+		{"PATTERNS", "patterns", nil},      // lowercases
+		{"   ", "", domain.ErrEmptyTag},    // pure whitespace
+		{"", "", domain.ErrEmptyTag},       // empty
+		{"\t\n", "", domain.ErrEmptyTag},   // weird whitespace
+		{"go", "go", nil},                  // short ok
 		{strings.Repeat("a", domain.MaxTagLength), strings.Repeat("a", domain.MaxTagLength), nil},
 	}
 	for _, c := range cases {

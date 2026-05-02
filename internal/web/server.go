@@ -19,11 +19,11 @@ import (
 
 // Options controls Server behavior.
 type Options struct {
-	Host     string // bind host; empty → "127.0.0.1"
-	Port     int    // bind port; 0 → 7777
-	OpenURL  bool   // launch the platform browser on Run
-	OnReady  func(addr string)
-	LogTo    io.Writer
+	Host    string // bind host; empty → "127.0.0.1"
+	Port    int    // bind port; 0 → 7777
+	OpenURL bool   // launch the platform browser on Run
+	OnReady func(addr string)
+	LogTo   io.Writer
 }
 
 // Server is a small wrapper around http.Server + chi so the cobra command
@@ -95,7 +95,7 @@ func New(db *sql.DB, opts Options) *Server {
 // Addr returns the bind address (host:port) the server is configured for.
 func (s *Server) Addr() string { return s.addr }
 
-// Run starts the HTTP server and blocks until ctx is cancelled. Auto-opens
+// Run starts the HTTP server and blocks until ctx is canceled. Auto-opens
 // the browser when opts.OpenURL is true.
 func (s *Server) Run(ctx context.Context, openURL bool, onReady func(addr string)) error {
 	ln, err := net.Listen("tcp", s.srv.Addr)

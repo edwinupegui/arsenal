@@ -124,5 +124,3 @@ func initApp(ctx context.Context) (*AppContext, error) {
 		Queries: store.New(db),
 	}, nil
 }
-
-

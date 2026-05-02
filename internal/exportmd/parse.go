@@ -208,9 +208,7 @@ type ImportReport struct {
 func Import(ctx context.Context, dir string, svc *resources.Service, q *store.Queries) (ImportReport, error) {
 	rep := ImportReport{}
 
-	if err := importCategoriesIndex(ctx, q, dir, &rep); err != nil {
-		return rep, err
-	}
+	importCategoriesIndex(ctx, q, dir, &rep)
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -313,22 +311,24 @@ func orNow(s string) string {
 
 // importCategoriesIndex consumes <dir>/_categories.json (when present) and
 // upserts each entry into the destination DB so resources arriving from
-// markdown frontmatter can find their category by slug. Missing file is
-// not an error: older exports won't have it.
-func importCategoriesIndex(ctx context.Context, q *store.Queries, dir string, rep *ImportReport) error {
+// markdown frontmatter can find their category by slug. Best-effort:
+// missing file, parse failures and per-category errors are recorded as
+// warnings rather than aborted — the resource pass below still tries to
+// resolve any slugs that did make it in.
+func importCategoriesIndex(ctx context.Context, q *store.Queries, dir string, rep *ImportReport) {
 	path := filepath.Join(dir, CategoriesIndexFilename)
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil
+		return
 	}
 	if err != nil {
 		rep.Warnings = append(rep.Warnings, fmt.Sprintf("read %s: %v", path, err))
-		return nil
+		return
 	}
 	var cats []CategoryEntry
 	if err := json.Unmarshal(data, &cats); err != nil {
 		rep.Warnings = append(rep.Warnings, fmt.Sprintf("parse %s: %v", path, err))
-		return nil
+		return
 	}
 	for _, c := range cats {
 		if c.Slug == "" {
@@ -346,5 +346,4 @@ func importCategoriesIndex(ctx context.Context, q *store.Queries, dir string, re
 			rep.Warnings = append(rep.Warnings, fmt.Sprintf("create category %q: %v", c.Slug, err))
 		}
 	}
-	return nil
 }

@@ -101,19 +101,19 @@ func writeTable(out io.Writer, items []store.ListedResource) {
 
 func writeJSON(out io.Writer, items []store.ListedResource) error {
 	type tagged struct {
-		ID           int64   `json:"id"`
-		Title        string  `json:"title"`
-		URL          string  `json:"url"`
-		Description  *string `json:"description,omitempty"`
-		Type         string  `json:"type"`
-		Language     string  `json:"language"`
-		CategorySlug *string `json:"category_slug,omitempty"`
-		CategoryName *string `json:"category_name,omitempty"`
-		Notes        *string `json:"notes,omitempty"`
-		Favorite     bool    `json:"favorite"`
-		CreatedAt    string  `json:"created_at"`
-		UpdatedAt    string  `json:"updated_at"`
-		DeletedAt    *string `json:"deleted_at,omitempty"`
+		ID           int64    `json:"id"`
+		Title        string   `json:"title"`
+		URL          string   `json:"url"`
+		Description  *string  `json:"description,omitempty"`
+		Type         string   `json:"type"`
+		Language     string   `json:"language"`
+		CategorySlug *string  `json:"category_slug,omitempty"`
+		CategoryName *string  `json:"category_name,omitempty"`
+		Notes        *string  `json:"notes,omitempty"`
+		Favorite     bool     `json:"favorite"`
+		CreatedAt    string   `json:"created_at"`
+		UpdatedAt    string   `json:"updated_at"`
+		DeletedAt    *string  `json:"deleted_at,omitempty"`
 		Tags         []string `json:"tags"`
 	}
 

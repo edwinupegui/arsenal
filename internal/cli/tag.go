@@ -239,4 +239,3 @@ func upsertTagByName(ctx context.Context, q *store.Queries, normName string) (st
 	}
 	return q.UpsertTag(ctx, normName)
 }
-
