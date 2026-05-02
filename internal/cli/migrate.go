@@ -140,6 +140,9 @@ func printReport(cmd *cobra.Command, r legacy.Report, destPath string) {
 		fmt.Fprintf(out, "  resources skipped (duplicate URL): %d\n", r.ResourcesSkippedDup)
 	}
 	fmt.Fprintf(out, "  distinct tags created: %d\n", r.TagsCreated)
+	if r.TagsDroppedAsCategoryOf > 0 {
+		fmt.Fprintf(out, "  legacy tags dropped (same as own category): %d\n", r.TagsDroppedAsCategoryOf)
+	}
 	if len(r.Warnings) > 0 {
 		fmt.Fprintf(out, "  warnings:\n")
 		for _, w := range r.Warnings {

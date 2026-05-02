@@ -26,13 +26,14 @@ import (
 // Report describes what an import did (or, in dry-run mode, would have done).
 // Counts are post-deduplication.
 type Report struct {
-	DryRun                bool
-	CategoriesInserted    int
-	CategoriesAlreadyKept int // already existed in the destination
-	ResourcesImported     int
-	ResourcesSkippedDup   int // URL already exists in destination
-	TagsCreated           int
-	Warnings              []string
+	DryRun                  bool
+	CategoriesInserted      int
+	CategoriesAlreadyKept   int // already existed in the destination
+	ResourcesImported       int
+	ResourcesSkippedDup     int // URL already exists in destination
+	TagsCreated             int
+	TagsDroppedAsCategoryOf int // legacy tag matched the resource's own category name
+	Warnings                []string
 }
 
 // Options controls the import.
@@ -81,8 +82,11 @@ func Import(ctx context.Context, opts Options) (Report, error) {
 	// the user's curated ordering.
 	sort.Slice(cats, func(i, j int) bool { return cats[i].ID < cats[j].ID })
 
-	// Map old categoryID -> new categoryID so resources relink correctly.
+	// Map old categoryID -> new categoryID so resources relink correctly,
+	// plus a parallel map of normalized category name for tag deduplication
+	// (a tag that equals its own category's name carries no extra signal).
 	catMap := make(map[int64]int64, len(cats))
+	catNorm := make(map[int64]string, len(cats))
 
 	for _, c := range cats {
 		newID, created, err := upsertCategory(ctx, opts.Queries, c)
@@ -90,6 +94,9 @@ func Import(ctx context.Context, opts Options) (Report, error) {
 			return report, fmt.Errorf("upsert category %q: %w", c.Name, err)
 		}
 		catMap[c.ID] = newID
+		if norm, nerr := domain.NormalizeTag(c.Name); nerr == nil {
+			catNorm[c.ID] = norm
+		}
 		if created {
 			report.CategoriesInserted++
 		} else {
@@ -115,6 +122,22 @@ func Import(ctx context.Context, opts Options) (Report, error) {
 			catPtr = &newID
 		}
 
+		// Drop tags that just repeat the resource's own category name —
+		// they were noise in the legacy seed data. Tags matching a
+		// *different* category are kept (they still classify the row).
+		tagsForRow := r.Tags
+		if ownCat, ok := catNorm[r.CategoryID]; ok {
+			filtered := make([]string, 0, len(r.Tags))
+			for _, t := range r.Tags {
+				if norm, err := domain.NormalizeTag(t); err == nil && norm == ownCat {
+					report.TagsDroppedAsCategoryOf++
+					continue
+				}
+				filtered = append(filtered, t)
+			}
+			tagsForRow = filtered
+		}
+
 		in := resources.ImportInput{
 			CreateInput: resources.CreateInput{
 				Title:       r.Title,
@@ -123,7 +146,7 @@ func Import(ctx context.Context, opts Options) (Report, error) {
 				Type:        coerceType(r.Type),
 				Language:    coerceLanguage(r.Language),
 				CategoryID:  catPtr,
-				Tags:        r.Tags,
+				Tags:        tagsForRow,
 			},
 			CreatedAt: r.CreatedAt,
 			UpdatedAt: r.CreatedAt, // legacy schema has no updated_at
@@ -133,7 +156,7 @@ func Import(ctx context.Context, opts Options) (Report, error) {
 			return report, fmt.Errorf("import resource %q (%s): %w", r.Title, r.URL, err)
 		}
 		report.ResourcesImported++
-		for _, t := range r.Tags {
+		for _, t := range tagsForRow {
 			if norm, err := domain.NormalizeTag(t); err == nil {
 				tagSeen[norm] = struct{}{}
 			}
