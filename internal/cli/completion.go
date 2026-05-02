@@ -20,7 +20,7 @@ import (
 // instead of crashing the shell.
 func wireCompletions(root *cobra.Command) {
 	// Subcommands that take a resource id as the first positional arg.
-	for _, name := range []string{"show", "rm", "restore", "purge", "star", "unstar"} {
+	for _, name := range []string{"show", "rm", "restore", "purge", "star", "unstar", "edit"} {
 		if c, _, err := root.Find([]string{name}); err == nil {
 			c.ValidArgsFunction = completeResourceIDs
 		}

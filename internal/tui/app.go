@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -24,6 +25,7 @@ const (
 	viewList viewState = iota
 	viewDetail
 	viewConfirmDelete
+	viewSearchInput
 )
 
 // App is the root Bubble Tea model. It owns the DB handles, the list and
@@ -36,10 +38,12 @@ type App struct {
 	queries *store.Queries
 	service *resources.Service
 
-	keys    keyMap
-	list    list.Model
-	detail  detailModel
-	confirm confirmModel
+	keys      keyMap
+	list      list.Model
+	detail    detailModel
+	confirm   confirmModel
+	searchIn  textinput.Model
+	searchActive string // "" → showing default list; non-empty → search results
 
 	width, height int
 
@@ -65,23 +69,30 @@ func New(db *sql.DB) App {
 	l.Styles.Title = titleStyle
 	// Wire global keybindings into the list's help so `?` shows them.
 	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{keys.Detail, keys.Trash, keys.SoftDelete, keys.Star, keys.OpenURL}
+		return []key.Binding{keys.Detail, keys.Search, keys.Trash, keys.SoftDelete, keys.Star, keys.OpenURL}
 	}
 	l.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			keys.Detail, keys.Trash, keys.SoftDelete, keys.Restore,
+			keys.Detail, keys.Search, keys.ClearList,
+			keys.Trash, keys.SoftDelete, keys.Restore,
 			keys.Star, keys.OpenURL, keys.Refresh, keys.Quit,
 		}
 	}
 
+	si := textinput.New()
+	si.Placeholder = "search title, description, notes, tags…"
+	si.Prompt = "/ "
+	si.CharLimit = 200
+
 	return App{
-		state:   viewList,
-		db:      db,
-		queries: store.New(db),
-		service: resources.New(db),
-		keys:    keys,
-		list:    l,
-		detail:  newDetailModel(),
+		state:    viewList,
+		db:       db,
+		queries:  store.New(db),
+		service:  resources.New(db),
+		keys:     keys,
+		list:     l,
+		detail:   newDetailModel(),
+		searchIn: si,
 	}
 }
 
@@ -126,6 +137,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			title = "Arsenal — Trash"
 		}
 		a.list.Title = title
+		a.searchActive = ""
+		return a, nil
+
+	case searchResultsMsg:
+		if msg.err != nil {
+			a.statusErr = msg.err
+			return a, nil
+		}
+		a.list.SetItems(asItems(msg.items))
+		a.list.Title = fmt.Sprintf("Arsenal — search: %s", msg.query)
+		a.searchActive = msg.query
+		a.statusErr = nil
+		a.statusMsg = fmt.Sprintf("%d match", len(msg.items))
 		return a, nil
 
 	case resourceMutatedMsg:
@@ -147,6 +171,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.updateDetail(msg)
 	case viewConfirmDelete:
 		return a.updateConfirm(msg)
+	case viewSearchInput:
+		return a.updateSearchInput(msg)
 	default:
 		return a.updateList(msg)
 	}
@@ -171,6 +197,16 @@ func (a App) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.statusMsg = ""
 			return a, loadResourcesCmd(a.queries, a.showTrashed)
 		case key.Matches(km, a.keys.Refresh):
+			return a, loadResourcesCmd(a.queries, a.showTrashed)
+		case key.Matches(km, a.keys.Search):
+			a.searchIn.SetValue("")
+			a.searchIn.Focus()
+			a.state = viewSearchInput
+			a.statusMsg = ""
+			return a, textinput.Blink
+		case key.Matches(km, a.keys.ClearList):
+			a.statusMsg = ""
+			a.searchActive = ""
 			return a, loadResourcesCmd(a.queries, a.showTrashed)
 		case key.Matches(km, a.keys.Star):
 			if it, ok := a.selectedItem(); ok {
@@ -224,6 +260,30 @@ func (a App) updateDetail(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, cmd
 }
 
+// updateSearchInput handles the FTS5 search overlay. Enter dispatches the
+// search; esc cancels and reloads the default list.
+func (a App) updateSearchInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch km.String() {
+		case "esc":
+			a.state = viewList
+			a.searchIn.Blur()
+			return a, nil
+		case "enter":
+			query := strings.TrimSpace(a.searchIn.Value())
+			a.state = viewList
+			a.searchIn.Blur()
+			if query == "" {
+				return a, loadResourcesCmd(a.queries, a.showTrashed)
+			}
+			return a, searchResourcesCmd(a.queries, query)
+		}
+	}
+	var cmd tea.Cmd
+	a.searchIn, cmd = a.searchIn.Update(msg)
+	return a, cmd
+}
+
 func (a App) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if km, ok := msg.(tea.KeyMsg); ok {
 		switch km.String() {
@@ -248,14 +308,31 @@ func (a App) View() string {
 		body = a.detail.View()
 	case viewConfirmDelete:
 		body = a.confirm.view(a.width, a.height)
+	case viewSearchInput:
+		body = renderSearchOverlay(a.searchIn.View(), a.width, a.height)
 	default:
+		header := ""
 		if a.showTrashed {
-			body = trashBannerStyle.Render(" TRASH ") + "\n" + a.list.View()
-		} else {
-			body = a.list.View()
+			header = trashBannerStyle.Render(" TRASH ") + "\n"
 		}
+		if a.searchActive != "" {
+			header += mutedStyle.Render(fmt.Sprintf("  search: %q  (c to clear)", a.searchActive)) + "\n"
+		}
+		body = header + a.list.View()
 	}
 	return body + "\n" + a.statusLine()
+}
+
+// renderSearchOverlay centers a small bordered prompt over the screen.
+// The list is hidden underneath while the user types.
+func renderSearchOverlay(input string, width, height int) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorAccent).
+		Padding(1, 2).
+		Width(60).
+		Render("Search\n\n" + input + "\n\n" + mutedStyle.Render("[enter] search   [esc] cancel"))
+	return lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center, box)
 }
 
 func (a App) statusLine() string {
@@ -268,6 +345,7 @@ func (a App) statusLine() string {
 	parts := []string{
 		keyStyle.Render("enter") + " detail",
 		keyStyle.Render("/") + " filter",
+		keyStyle.Render("s") + " search",
 		keyStyle.Render("t") + " trash",
 		keyStyle.Render("d") + " del",
 		keyStyle.Render("*") + " fav",
@@ -298,6 +376,16 @@ func loadResourcesCmd(q *store.Queries, trashed bool) tea.Cmd {
 		}
 		items, err := q.ListResourcesFiltered(context.Background(), filter)
 		return resourcesLoadedMsg{items: items, err: err}
+	}
+}
+
+// searchResourcesCmd dispatches an FTS5 query and wraps the result so the
+// list view can swap to it. Empty results aren't an error — the status
+// line handles "0 match" rendering.
+func searchResourcesCmd(q *store.Queries, query string) tea.Cmd {
+	return func() tea.Msg {
+		items, err := q.SearchResources(context.Background(), query, 200)
+		return searchResultsMsg{query: query, items: items, err: err}
 	}
 }
 

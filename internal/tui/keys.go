@@ -16,6 +16,8 @@ type keyMap struct {
 	Refresh    key.Binding
 	Help       key.Binding
 	OpenURL    key.Binding
+	Search     key.Binding
+	ClearList  key.Binding
 }
 
 func defaultKeys() keyMap {
@@ -30,5 +32,7 @@ func defaultKeys() keyMap {
 		Refresh:    key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "refresh")),
 		Help:       key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 		OpenURL:    key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "open url in browser")),
+		Search:     key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "FTS5 search")),
+		ClearList:  key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "clear search/filter")),
 	}
 }

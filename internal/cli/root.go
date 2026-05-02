@@ -61,8 +61,11 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newTUICmd())
 	root.AddCommand(newWebCmd())
 	root.AddCommand(newBackupCmd())
+	root.AddCommand(newRestoreBackupCmd())
 	root.AddCommand(newExportCmd())
 	root.AddCommand(newImportCmd())
+	root.AddCommand(newStatsCmd())
+	root.AddCommand(newEditCmd())
 
 	wireCompletions(root)
 

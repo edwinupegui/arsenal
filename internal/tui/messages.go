@@ -2,6 +2,10 @@ package tui
 
 import "github.com/edwinupegui/arsenal/internal/store"
 
+// store_listed is an alias kept just so the import always resolves; the
+// real type used by messages is store.ListedResource.
+type store_listed = store.ListedResource
+
 // Message types crossing the Update boundary. Concentrated here so the model
 // in app.go can see every shape the runtime can hand it without scrolling.
 
@@ -22,4 +26,12 @@ type resourceMutatedMsg struct {
 // errorMsg is a generic bag for "something blew up, show it on the status line".
 type errorMsg struct {
 	err error
+}
+
+// searchResultsMsg is the result of an FTS5 search dispatched from the
+// search-input view. The runtime swaps the list contents with these.
+type searchResultsMsg struct {
+	query string
+	items []store_listed
+	err   error
 }

@@ -146,6 +146,13 @@ func writeCategoriesIndex(ctx context.Context, q *store.Queries, root string) er
 	return os.WriteFile(filepath.Join(root, CategoriesIndexFilename), data, 0o644)
 }
 
+// RenderResource is the public version of renderResource for callers (e.g.
+// the `arsenal edit` command) that need the same markdown serialization
+// the export command emits.
+func RenderResource(lr store.ListedResource) string {
+	return renderResource(lr)
+}
+
 // renderResource builds the markdown payload: a `---`-fenced frontmatter
 // block followed by a blank line and the description / notes as the body.
 func renderResource(lr store.ListedResource) string {
