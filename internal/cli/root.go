@@ -35,6 +35,12 @@ func Execute(fsys embed.FS) error {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       fmt.Sprintf("%s (commit %s, built %s)", Version, Commit, Date),
+		// No subcommand → open the TUI. This matches the project's "default
+		// to interactive" UX while still allowing every script-friendly
+		// subcommand to take over with explicit invocation.
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runTUI(cmd)
+		},
 	}
 
 	root.AddCommand(newVersionCmd())
@@ -52,6 +58,7 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newAddCmd())
 	root.AddCommand(newCatCmd())
 	root.AddCommand(newTagCmd())
+	root.AddCommand(newTUICmd())
 
 	return root.ExecuteContext(context.Background())
 }
