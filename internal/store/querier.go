@@ -13,6 +13,7 @@ type Querier interface {
 	CountResources(ctx context.Context) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateResource(ctx context.Context, arg CreateResourceParams) (Resource, error)
+	CreateResourceWithTimestamps(ctx context.Context, arg CreateResourceWithTimestampsParams) (Resource, error)
 	DeleteCategory(ctx context.Context, id int64) error
 	DeleteOrphanTags(ctx context.Context) error
 	DeleteTag(ctx context.Context, id int64) error

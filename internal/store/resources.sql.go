@@ -70,6 +70,62 @@ func (q *Queries) CreateResource(ctx context.Context, arg CreateResourceParams) 
 	return i, err
 }
 
+const createResourceWithTimestamps = `-- name: CreateResourceWithTimestamps :one
+INSERT INTO resources (
+    title, url, description, type, language, category_id, notes, favorite,
+    created_at, updated_at, deleted_at
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+)
+RETURNING id, title, url, description, type, language, category_id, notes, favorite, created_at, updated_at, deleted_at
+`
+
+type CreateResourceWithTimestampsParams struct {
+	Title       string         `json:"title"`
+	Url         string         `json:"url"`
+	Description sql.NullString `json:"description"`
+	Type        string         `json:"type"`
+	Language    string         `json:"language"`
+	CategoryID  sql.NullInt64  `json:"category_id"`
+	Notes       sql.NullString `json:"notes"`
+	Favorite    int64          `json:"favorite"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
+	DeletedAt   sql.NullString `json:"deleted_at"`
+}
+
+func (q *Queries) CreateResourceWithTimestamps(ctx context.Context, arg CreateResourceWithTimestampsParams) (Resource, error) {
+	row := q.db.QueryRowContext(ctx, createResourceWithTimestamps,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.Type,
+		arg.Language,
+		arg.CategoryID,
+		arg.Notes,
+		arg.Favorite,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.DeletedAt,
+	)
+	var i Resource
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.Type,
+		&i.Language,
+		&i.CategoryID,
+		&i.Notes,
+		&i.Favorite,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getResource = `-- name: GetResource :one
 SELECT id, title, url, description, type, language, category_id, notes, favorite, created_at, updated_at, deleted_at FROM resources WHERE id = ? LIMIT 1
 `

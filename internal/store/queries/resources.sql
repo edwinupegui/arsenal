@@ -6,6 +6,15 @@ INSERT INTO resources (
 )
 RETURNING *;
 
+-- name: CreateResourceWithTimestamps :one
+INSERT INTO resources (
+    title, url, description, type, language, category_id, notes, favorite,
+    created_at, updated_at, deleted_at
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+)
+RETURNING *;
+
 -- name: GetResource :one
 SELECT * FROM resources WHERE id = ? LIMIT 1;
 
