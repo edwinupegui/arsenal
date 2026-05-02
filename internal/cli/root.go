@@ -60,6 +60,9 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newTagCmd())
 	root.AddCommand(newTUICmd())
 	root.AddCommand(newWebCmd())
+	root.AddCommand(newBackupCmd())
+	root.AddCommand(newExportCmd())
+	root.AddCommand(newImportCmd())
 
 	return root.ExecuteContext(context.Background())
 }
