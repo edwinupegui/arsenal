@@ -134,11 +134,38 @@ type counts struct {
 
 // pageData is the shared envelope every render call passes to the layout.
 type pageData struct {
-	Title  string
-	Nav    string
-	Query  string
-	Flash  flash
-	Counts counts
+	Title   string
+	Nav     string
+	Query   string
+	Flash   flash
+	Counts  counts
+	Sidebar sidebarVM
+	Aside   *asideVM // nil => don't render the right column
+}
+
+// sidebarLinkVM is one navigable entry in the persistent left sidebar.
+type sidebarLinkVM struct {
+	Href   string
+	Label  string
+	Icon   string
+	Count  int64
+	Active bool
+}
+
+// sidebarVM groups the left-sidebar sections. Each section is a flat slice
+// of links so the template iterates without nested logic.
+type sidebarVM struct {
+	AllActive  bool
+	FavActive  bool
+	Categories []sidebarLinkVM
+	Types      []sidebarLinkVM
+	Tags       []sidebarLinkVM
+}
+
+// asideVM is the optional right-side assistive panel. List views populate it;
+// detail/form pages leave it nil.
+type asideVM struct {
+	Recent []resourceVM
 }
 
 // listFilterVM exposes the active filter to the list view header so the user

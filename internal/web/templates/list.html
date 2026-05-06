@@ -18,7 +18,11 @@
 {{end}}
 
 {{if not .Resources}}
-  <div class="empty">No resources match. <a href="/resources/new">Add the first one →</a></div>
+  <div class="empty">
+    <h2>No resources yet</h2>
+    <p>Build your arsenal — start with the first resource.</p>
+    <a class="btn btn-primary" href="/resources/new">+ Add resource</a>
+  </div>
 {{else}}
 {{range .Groups}}
   <section class="type-group" id="type-{{.Type}}">
@@ -68,7 +72,9 @@
             hx-post="/resources/{{.ID}}/purge"
             hx-target="#card-{{.ID}}"
             hx-swap="outerHTML"
-            onsubmit="return confirm('Permanently delete? This cannot be undone.')"
+            data-confirm="This will permanently delete the resource. This cannot be undone."
+            data-confirm-title="Delete forever?"
+            data-confirm-label="Delete forever"
             style="display:inline">
         <button class="btn btn-danger">purge</button>
       </form>
@@ -77,12 +83,14 @@
             hx-post="/resources/{{.ID}}/delete"
             hx-target="#card-{{.ID}}"
             hx-swap="outerHTML"
-            onsubmit="return confirm('Move to trash?')"
+            data-confirm="The resource will move to trash. You can restore it later."
+            data-confirm-title="Move to trash?"
+            data-confirm-label="Move to trash"
             style="display:inline">
         <button class="btn btn-danger">delete</button>
       </form>
     {{end}}
-    <span style="margin-left:auto">#{{.ID}}</span>
+    <span class="id">#{{.ID}}</span>
   </div>
 </article>
 {{end}}

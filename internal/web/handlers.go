@@ -41,7 +41,79 @@ func (h *Handlers) commonPage(r *http.Request, title, nav string) pageData {
 	if trashed, err := countTrashed(r.Context(), h.db); err == nil {
 		pd.Counts.Trashed = trashed
 	}
+	pd.Sidebar = h.buildSidebar(r)
 	return pd
+}
+
+// buildSidebar assembles the persistent left rail with the current filter
+// reflected as Active markers. Best-effort: query failures degrade to empty
+// sections rather than blocking the page.
+func (h *Handlers) buildSidebar(r *http.Request) sidebarVM {
+	q := r.URL.Query()
+	curCat := q.Get("cat")
+	curTag := q.Get("tag")
+	curType := q.Get("type")
+	curFav := q.Get("fav") == "1"
+	anyFilter := curCat != "" || curTag != "" || curType != "" || curFav ||
+		q.Get("lang") != ""
+	isResources := r.URL.Path == "/resources"
+
+	sb := sidebarVM{
+		AllActive: isResources && !anyFilter,
+		FavActive: isResources && curFav,
+	}
+
+	if cats, err := h.queries.ListCategoriesWithCounts(r.Context()); err == nil {
+		for _, c := range cats {
+			if c.ResourceCount == 0 {
+				continue
+			}
+			sb.Categories = append(sb.Categories, sidebarLinkVM{
+				Href:   "/resources?cat=" + c.Slug,
+				Label:  c.Name,
+				Icon:   c.Icon,
+				Count:  c.ResourceCount,
+				Active: isResources && curCat == c.Slug,
+			})
+		}
+	}
+
+	for _, t := range domain.AllResourceTypes() {
+		s := string(t)
+		sb.Types = append(sb.Types, sidebarLinkVM{
+			Href:   "/resources?type=" + s,
+			Label:  s,
+			Active: isResources && curType == s,
+		})
+	}
+
+	if tags, err := h.queries.ListTags(r.Context()); err == nil {
+		const maxTags = 15
+		for i, t := range tags {
+			if i >= maxTags {
+				break
+			}
+			sb.Tags = append(sb.Tags, sidebarLinkVM{
+				Href:   "/resources?tag=" + t.Name,
+				Label:  t.Name,
+				Count:  t.ResourceCount,
+				Active: isResources && curTag == t.Name,
+			})
+		}
+	}
+
+	return sb
+}
+
+// buildAside builds the right-side assistive panel for list views. Returns
+// nil when there is nothing useful to show, so the template suppresses the
+// column entirely.
+func (h *Handlers) buildAside(r *http.Request) *asideVM {
+	rows, err := h.queries.ListResourcesFiltered(r.Context(), store.ListFilter{Limit: 5})
+	if err != nil || len(rows) == 0 {
+		return nil
+	}
+	return &asideVM{Recent: toVMs(rows)}
 }
 
 // --- list / search / trash ---------------------------------------------------
@@ -83,6 +155,7 @@ func (h *Handlers) listResources(w http.ResponseWriter, r *http.Request) {
 	if data.Filter.Active && data.Title == "Resources" {
 		data.Title = "Resources (filtered)"
 	}
+	data.Aside = h.buildAside(r)
 	render(w, "list", data)
 }
 
@@ -105,6 +178,7 @@ func (h *Handlers) trashList(w http.ResponseWriter, r *http.Request) {
 		Resources: vms,
 		Groups:    groupByType(vms),
 	}
+	data.Aside = h.buildAside(r)
 	render(w, "list", data)
 }
 
@@ -130,6 +204,7 @@ func (h *Handlers) searchResources(w http.ResponseWriter, r *http.Request) {
 		Resources: vms,
 		Groups:    groupByType(vms),
 	}
+	data.Aside = h.buildAside(r)
 	render(w, "list", data)
 }
 

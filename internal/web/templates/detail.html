@@ -8,13 +8,18 @@
       <button class="btn">Restore</button>
     </form>
     <form method="post" action="/resources/{{.Resource.ID}}/purge"
-          onsubmit="return confirm('Permanently delete? This cannot be undone.')"
+          data-confirm="This will permanently delete the resource. This cannot be undone."
+          data-confirm-title="Delete forever?"
+          data-confirm-label="Delete forever"
           style="display:inline">
       <button class="btn btn-danger">Delete forever</button>
     </form>
   {{else}}
     <form method="post" action="/resources/{{.Resource.ID}}/delete"
-          onsubmit="return confirm('Move to trash?')" style="display:inline">
+          data-confirm="The resource will move to trash. You can restore it later."
+          data-confirm-title="Move to trash?"
+          data-confirm-label="Move to trash"
+          style="display:inline">
       <button class="btn btn-danger">Move to trash</button>
     </form>
   {{end}}
@@ -24,7 +29,7 @@
   <h1>
     {{if .Resource.Favorite}}★ {{end}}{{.Resource.Title}}
   </h1>
-  <p>
+  <p class="url-row">
     <a href="{{.Resource.URL}}" target="_blank" rel="noopener">{{.Resource.URL}} ↗</a>
   </p>
   <dl>

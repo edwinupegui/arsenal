@@ -4,7 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}} — Arsenal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap">
   <link rel="stylesheet" href="/static/app.css">
+  <script>
+    (function () {
+      var t = localStorage.getItem('arsenal-theme');
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    })();
+  </script>
   <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
@@ -19,15 +28,168 @@
     <form class="search" action="/search" method="get" role="search">
       <input type="search" name="q" placeholder="Search title, description, tags…" value="{{.Query}}">
     </form>
+    <button type="button" class="theme-toggle" id="theme-toggle" title="Toggle theme">◐</button>
   </header>
 
-  <main>
-    {{if .Flash.Message}}<div class="flash flash-{{.Flash.Type}}">{{.Flash.Message}}</div>{{end}}
-    {{block "content" .}}{{end}}
-  </main>
+  <div class="app-shell{{if .Aside}} has-aside{{end}}">
+    <aside class="sidebar" aria-label="Filters">
+      <nav class="sidebar-section">
+        <a href="/resources" class="sidebar-link {{if .Sidebar.AllActive}}is-active{{end}}">
+          <span class="sidebar-link-label">All resources</span>
+          <span class="sidebar-link-count">{{.Counts.Active}}</span>
+        </a>
+        <a href="/resources?fav=1" class="sidebar-link {{if .Sidebar.FavActive}}is-active{{end}}">
+          <span class="sidebar-link-label">★ Favorites</span>
+        </a>
+        <a href="/trash" class="sidebar-link {{if eq .Nav "trash"}}is-active{{end}}">
+          <span class="sidebar-link-label">Trash</span>
+          <span class="sidebar-link-count">{{.Counts.Trashed}}</span>
+        </a>
+      </nav>
+
+      {{if .Sidebar.Types}}
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Types</h3>
+        {{range .Sidebar.Types}}
+          <a href="{{.Href}}" class="sidebar-link {{if .Active}}is-active{{end}}">
+            <span class="sidebar-link-label">{{.Label}}</span>
+          </a>
+        {{end}}
+      </div>
+      {{end}}
+
+      {{if .Sidebar.Categories}}
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Categories</h3>
+        {{range .Sidebar.Categories}}
+          <a href="{{.Href}}" class="sidebar-link {{if .Active}}is-active{{end}}">
+            <span class="sidebar-link-label">{{if .Icon}}{{.Icon}} {{end}}{{.Label}}</span>
+            <span class="sidebar-link-count">{{.Count}}</span>
+          </a>
+        {{end}}
+      </div>
+      {{end}}
+
+      {{if .Sidebar.Tags}}
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Tags</h3>
+        <div class="sidebar-tags">
+          {{range .Sidebar.Tags}}
+            <a href="{{.Href}}" class="sidebar-tag {{if .Active}}is-active{{end}}">{{.Label}}<span>{{.Count}}</span></a>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </aside>
+
+    <main class="app-main">
+      {{if .Flash.Message}}<div class="flash flash-{{.Flash.Type}}">{{.Flash.Message}}</div>{{end}}
+      {{block "content" .}}{{end}}
+    </main>
+
+    {{if .Aside}}
+    <aside class="aside" aria-label="Recent activity">
+      <div class="aside-section">
+        <h3 class="aside-heading">Recent</h3>
+        <ul class="aside-list">
+          {{range .Aside.Recent}}
+            <li>
+              <a href="/resources/{{.ID}}" class="aside-recent-link">
+                <span class="aside-recent-title">{{.Title}}</span>
+                <span class="aside-recent-meta"><span class="badge type">{{.Type}}</span></span>
+              </a>
+            </li>
+          {{end}}
+        </ul>
+      </div>
+    </aside>
+    {{end}}
+  </div>
 
   <footer class="app-footer">
     Arsenal local · <a href="https://github.com/edwinupegui/arsenal" target="_blank" rel="noopener">github</a> · {{.Counts.Active}} active · {{.Counts.Trashed}} trashed
   </footer>
+
+  <div class="modal-backdrop" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal">
+      <h2 id="confirm-title">Confirm</h2>
+      <p id="confirm-message">Are you sure?</p>
+      <div class="actions">
+        <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          var html = document.documentElement;
+          var dark = html.getAttribute('data-theme') === 'dark';
+          if (dark) {
+            html.removeAttribute('data-theme');
+            localStorage.setItem('arsenal-theme', 'light');
+          } else {
+            html.setAttribute('data-theme', 'dark');
+            localStorage.setItem('arsenal-theme', 'dark');
+          }
+        });
+      }
+
+      var modal = document.getElementById('confirm-modal');
+      var titleEl = document.getElementById('confirm-title');
+      var msgEl = document.getElementById('confirm-message');
+      var okBtn = document.getElementById('confirm-ok');
+      var cancelBtn = document.getElementById('confirm-cancel');
+      var pending = null;
+
+      function open(form) {
+        var msg = form.getAttribute('data-confirm') || 'Are you sure?';
+        var title = form.getAttribute('data-confirm-title') || 'Confirm action';
+        var label = form.getAttribute('data-confirm-label') || 'Confirm';
+        var danger = form.getAttribute('data-confirm-danger') !== 'false';
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+        okBtn.textContent = label;
+        okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+        pending = form;
+        modal.classList.add('is-open');
+        okBtn.focus();
+      }
+      function close() {
+        modal.classList.remove('is-open');
+        pending = null;
+      }
+
+      document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.hasAttribute('data-confirm')) return;
+        if (form.dataset.confirmed === 'true') return;
+        e.preventDefault();
+        open(form);
+      }, true);
+
+      okBtn.addEventListener('click', function () {
+        if (!pending) return;
+        var form = pending;
+        form.dataset.confirmed = 'true';
+        close();
+        if (window.htmx && form.hasAttribute('hx-post')) {
+          window.htmx.trigger(form, 'submit');
+        } else {
+          form.submit();
+        }
+      });
+      cancelBtn.addEventListener('click', close);
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) close();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) close();
+      });
+    })();
+  </script>
 </body>
 </html>{{end}}
