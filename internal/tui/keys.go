@@ -18,6 +18,15 @@ type keyMap struct {
 	OpenURL    key.Binding
 	Search     key.Binding
 	ClearList  key.Binding
+	Tab        key.Binding
+	ShiftTab   key.Binding
+	JumpToday     key.Binding
+	JumpResources key.Binding
+	JumpTodos     key.Binding
+	JumpFinance   key.Binding
+	JumpCalendar  key.Binding
+	MarkDone   key.Binding
+	MarkOpen   key.Binding
 }
 
 func defaultKeys() keyMap {
@@ -34,5 +43,14 @@ func defaultKeys() keyMap {
 		OpenURL:    key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "open url in browser")),
 		Search:     key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "FTS5 search")),
 		ClearList:  key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "clear search/filter")),
+		Tab:        key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next area")),
+		ShiftTab:   key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev area")),
+		JumpToday:     key.NewBinding(key.WithKeys("1"), key.WithHelp("1", "Today")),
+		JumpResources: key.NewBinding(key.WithKeys("2"), key.WithHelp("2", "Resources")),
+		JumpTodos:     key.NewBinding(key.WithKeys("3"), key.WithHelp("3", "Todos")),
+		JumpFinance:   key.NewBinding(key.WithKeys("4"), key.WithHelp("4", "Finance")),
+		JumpCalendar:  key.NewBinding(key.WithKeys("5"), key.WithHelp("5", "Calendar")),
+		MarkDone: key.NewBinding(key.WithKeys("x"), key.WithHelp("x", "mark done")),
+		MarkOpen: key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "mark open")),
 	}
 }

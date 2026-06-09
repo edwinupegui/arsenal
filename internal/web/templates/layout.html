@@ -21,6 +21,7 @@
     <a href="/resources" class="logo">⚔ Arsenal</a>
     <nav>
       <a href="/resources" class="{{if eq .Nav "resources"}}active{{end}}">Resources</a>
+      <a href="/todos" class="{{if eq .Nav "todos"}}active{{end}}">Todos</a>
       <a href="/categories" class="{{if eq .Nav "categories"}}active{{end}}">Categories</a>
       <a href="/tags" class="{{if eq .Nav "tags"}}active{{end}}">Tags</a>
       <a href="/trash" class="{{if eq .Nav "trash"}}active{{end}}">Trash</a>
@@ -40,6 +41,10 @@
         </a>
         <a href="/resources?fav=1" class="sidebar-link {{if .Sidebar.FavActive}}is-active{{end}}">
           <span class="sidebar-link-label">★ Favorites</span>
+        </a>
+        <a href="/todos" class="sidebar-link {{if eq .Nav "todos"}}is-active{{end}}">
+          <span class="sidebar-link-label">Todos</span>
+          <span class="sidebar-link-count">{{.TodoCounts.Open}}</span>
         </a>
         <a href="/trash" class="sidebar-link {{if eq .Nav "trash"}}is-active{{end}}">
           <span class="sidebar-link-label">Trash</span>
@@ -194,3 +199,23 @@
   </script>
 </body>
 </html>{{end}}
+
+{{define "sidebar-oob"}}
+<nav class="sidebar-section" id="sidebar-nav" hx-swap-oob="true">
+  <a href="/resources" class="sidebar-link {{if .Sidebar.AllActive}}is-active{{end}}">
+    <span class="sidebar-link-label">All resources</span>
+    <span class="sidebar-link-count">{{.Counts.Active}}</span>
+  </a>
+  <a href="/resources?fav=1" class="sidebar-link {{if .Sidebar.FavActive}}is-active{{end}}">
+    <span class="sidebar-link-label">★ Favorites</span>
+  </a>
+  <a href="/todos" class="sidebar-link {{if eq .Nav "todos"}}is-active{{end}}">
+    <span class="sidebar-link-label">Todos</span>
+    <span class="sidebar-link-count">{{.TodoCounts.Open}}</span>
+  </a>
+  <a href="/trash" class="sidebar-link {{if eq .Nav "trash"}}is-active{{end}}">
+    <span class="sidebar-link-label">Trash</span>
+    <span class="sidebar-link-count">{{.Counts.Trashed}}</span>
+  </a>
+</nav>
+{{end}}

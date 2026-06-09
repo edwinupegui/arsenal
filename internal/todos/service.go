@@ -80,6 +80,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Todo, error) {
 // Update replaces the mutable fields of todo id. Tag updates are handled as
 // detach-all-then-reattach with orphan pruning.
 func (s *Service) Update(ctx context.Context, id int64, in CreateInput) (*Todo, error) {
+	if in.Recurrence == "" {
+		in.Recurrence = RecurrenceNone
+	}
 	if err := validateCreate(in); err != nil {
 		return nil, err
 	}

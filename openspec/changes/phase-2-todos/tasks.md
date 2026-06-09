@@ -200,7 +200,7 @@ Add `root.AddCommand(newTodoCmd())` in `internal/cli/root.go`. Add todo completi
 
 ## Work Unit D — TUI
 
-### D1. Add currentArea enum to app.go
+### D1. Add currentArea enum to app.go [x]
 Add `areaID` type and constants (`areaToday`, `areaResources`, `areaTodos`, `areaFinance`, `areaCalendar`) to `internal/tui/app.go`. Add `currentArea` field to `App` struct. Default: `areaResources`.
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: B2
@@ -209,7 +209,7 @@ Add `areaID` type and constants (`areaToday`, `areaResources`, `areaTodos`, `are
 - **Scenarios covered**: 1 — tui:1
 - **Specs**: todo-tui (Area enum)
 
-### D2. Implement key routing for area switching
+### D2. Implement key routing for area switching [x]
 Add `Tab`/`Shift+Tab` cycle (forward/backward with wrap-around) and `1`-`5` direct jump to `App.Update()`. Status bar renders current area name + key hints.
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D1
@@ -218,7 +218,7 @@ Add `Tab`/`Shift+Tab` cycle (forward/backward with wrap-around) and `1`-`5` dire
 - **Scenarios covered**: 4 — tui:2,3,4,5
 - **Specs**: todo-tui (Tab cycling, direct jump)
 
-### D3. Add placeholder renderers for Today/Finance/Calendar
+### D3. Add placeholder renderers for Today/Finance/Calendar [x]
 Add placeholder `View()` branches for non-functional areas: Today → "Today (coming soon — phase 3)", Finance → "Finance (coming soon — v3.x)", Calendar → "Calendar (coming soon — v3.x)".
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D2
@@ -227,7 +227,7 @@ Add placeholder `View()` branches for non-functional areas: Today → "Today (co
 - **Scenarios covered**: 2 — tui:6,7
 - **Specs**: todo-tui (Placeholder areas)
 
-### D4. Implement todos sub-model
+### D4. Implement todos sub-model [x]
 Create `internal/tui/todos.go` with todo sub-model: scrollable list, filter by status, search box, keybindings (`x`=done/open, `d`=soft-delete, `r`=restore in trash, `enter`=detail, `n`=new form). Uses `todos.Service` for all operations.
 - **Files**: `internal/tui/todos.go` (NEW)
 - **Depends**: D2, B8
@@ -236,7 +236,7 @@ Create `internal/tui/todos.go` with todo sub-model: scrollable list, filter by s
 - **Scenarios covered**: 5 — tui:8,9,10,11,12
 - **Specs**: todo-tui (Todo sub-model), todo-status, todo-lifecycle
 
-### D5. Status bar shows current area
+### D5. Status bar shows current area [x]
 Update `App.View()` status bar to display current area name + area-switching key hints (`Tab`/`Shift+Tab`/`1-5`).
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D2
@@ -245,7 +245,7 @@ Update `App.View()` status bar to display current area name + area-switching key
 - **Scenarios covered**: 1 — tui:13
 - **Specs**: todo-tui (Status bar)
 
-### D6. Verify Resources area still works
+### D6. Verify Resources area still works [x]
 Run existing TUI tests and manual smoke to confirm the `app.go` refactor didn't break the Resources area (list, detail, search, trash toggle, star/unstar).
 - **Files**: — (verification only)
 - **Depends**: D4, D5
@@ -258,7 +258,7 @@ Run existing TUI tests and manual smoke to confirm the `app.go` refactor didn't 
 
 ## Work Unit E — Web
 
-### E1. Define routes in todos.go
+### E1. Define routes in todos.go [x]
 Create `internal/web/todos.go` with route registration function. 11 routes per design §Web route contract: GET `/todos`, GET `/todos/new`, POST `/todos`, GET `/todos/{id}`, GET `/todos/{id}/edit`, POST `/todos/{id}`, POST `/todos/{id}/done`, POST `/todos/{id}/open`, POST `/todos/{id}/delete`, POST `/todos/{id}/restore`, POST `/todos/{id}/purge`. Wire into `internal/web/handlers.go` router setup.
 - **Files**: `internal/web/todos.go` (NEW), `internal/web/handlers.go` (MOD)
 - **Depends**: B8
@@ -267,7 +267,7 @@ Create `internal/web/todos.go` with route registration function. 11 routes per d
 - **Scenarios covered**: 0 (routing infrastructure)
 - **Specs**: todo-web (all routes)
 
-### E2. Implement list + new + create handlers
+### E2. Implement list + new + create handlers [x]
 Implement `listTodos` (GET `/todos` with filter query params), `newTodoForm` (GET `/todos/new`), `createTodo` (POST `/todos` with validation + redirect).
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E1, E6
@@ -276,7 +276,7 @@ Implement `listTodos` (GET `/todos` with filter query params), `newTodoForm` (GE
 - **Scenarios covered**: 3 — web:1,2,3,4
 - **Specs**: todo-web (List route, Create routes)
 
-### E3. Implement show + edit + update handlers
+### E3. Implement show + edit + update handlers [x]
 Implement `showTodo` (GET `/todos/{id}`), `editTodoForm` (GET `/todos/{id}/edit`), `updateTodo` (POST `/todos/{id}` with redirect).
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E2
@@ -285,7 +285,7 @@ Implement `showTodo` (GET `/todos/{id}`), `editTodoForm` (GET `/todos/{id}/edit`
 - **Scenarios covered**: 2 — web:5,6
 - **Specs**: todo-web (Show and edit routes)
 
-### E4. Implement status transition handlers (HTMX)
+### E4. Implement status transition handlers (HTMX) [x]
 Implement `markTodoDone` (POST `/todos/{id}/done`) and `markTodoOpen` (POST `/todos/{id}/open`). Return HTML card fragments for HTMX in-place swap.
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E3
@@ -294,7 +294,7 @@ Implement `markTodoDone` (POST `/todos/{id}/done`) and `markTodoOpen` (POST `/to
 - **Scenarios covered**: 2 — web:7,8
 - **Specs**: todo-web (Status transition routes), todo-status
 
-### E5. Implement delete/restore/purge handlers
+### E5. Implement delete/restore/purge handlers [x]
 Implement `softDeleteTodo` (POST, returns empty fragment for card removal), `restoreTodo` (POST, returns card fragment), `purgeTodo` (POST, redirect to `/todos`). Purge shows confirmation dialog.
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E4
@@ -303,7 +303,7 @@ Implement `softDeleteTodo` (POST, returns empty fragment for card removal), `res
 - **Scenarios covered**: 3 — web:9,10,11
 - **Specs**: todo-web (Delete/restore/purge routes)
 
-### E6. Add todoVM to viewmodel.go
+### E6. Add todoVM to viewmodel.go [x]
 Add `todoVM` struct mirroring `resourceVM` pattern: unwraps `sql.NullString`/`NullInt64`, resolves tag names, category slugs, formatted dates. Add `toTodoVM()` converter.
 - **Files**: `internal/web/viewmodel.go` (MOD)
 - **Depends**: A5
@@ -312,7 +312,7 @@ Add `todoVM` struct mirroring `resourceVM` pattern: unwraps `sql.NullString`/`Nu
 - **Scenarios covered**: 1 — web:12
 - **Specs**: todo-web (View model)
 
-### E7. Create todos.html templates
+### E7. Create todos.html templates [x]
 Create `internal/web/templates/todos.html` with: list view (card-based, filter controls), show view (detail), form view (create/edit reuse with `kind=todo`), card fragment (for HTMX swaps). Recurrence displayed in all views.
 - **Files**: `internal/web/templates/todos.html` (NEW)
 - **Depends**: E6
@@ -321,7 +321,7 @@ Create `internal/web/templates/todos.html` with: list view (card-based, filter c
 - **Scenarios covered**: 4 — recurrence:4,5,6,7
 - **Specs**: todo-web (templates), todo-recurrence-placeholder (display)
 
-### E8. Update layout.html sidebar
+### E8. Update layout.html sidebar [x]
 Add "Todos" link to sidebar in `internal/web/templates/layout.html` with badge counts: open count, overdue count. Add `CountOpenTodos` query to `commonPage()`. Add `todoCountOpen` / `todoCountOverdue` to `pageData`.
 - **Files**: `internal/web/templates/layout.html` (MOD), `internal/web/handlers.go` (MOD)
 - **Depends**: E2, A5
@@ -330,7 +330,7 @@ Add "Todos" link to sidebar in `internal/web/templates/layout.html` with badge c
 - **Scenarios covered**: 2 — web:13,14
 - **Specs**: todo-web (Sidebar integration)
 
-### E9. HTMX partials for card swap
+### E9. HTMX partials for card swap [x]
 Ensure HTMX `hx-swap` attributes on todo cards work: mark-done/open swap outerHTML with updated card; soft-delete removes card; restore re-renders card. Sidebar counts refresh via `hx-swap-oob`.
 - **Files**: `internal/web/templates/todos.html` (MOD), `internal/web/todos.go` (MOD)
 - **Depends**: E4, E5, E8
