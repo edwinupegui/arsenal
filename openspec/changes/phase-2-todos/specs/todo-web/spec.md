@@ -113,6 +113,29 @@ The system MUST define a `todoVM` struct mirroring the `resourceVM` pattern, map
 - **WHEN** a todo with tags `["urgente", "casa"]` is rendered
 - **THEN** the `todoVM.Tags` field contains `["casa", "urgente"]` (sorted, normalized)
 
+<!-- AMEND: phase-3-today -->
+
+### Requirement: Sidebar Today entry and ordering
+
+The system MUST add a "Today" link to the web sidebar before all domain entries. The sidebar order SHALL be: Today, Resources, Todos, Categories, Tags, Trash. The "Today" link SHALL display an overdue count badge (from `CountOverdueTodos`); the badge is hidden when the count is zero. After HTMX actions that change overdue counts (e.g., mark-done), the sidebar badge SHALL update via `hx-swap-oob` without a full page reload.
+(Previously: Sidebar listed only Resources, Todos, Categories, Tags, Trash with no Today entry.)
+
+#### Scenario: Sidebar shows Today link with overdue badge
+
+- **WHEN** any page is rendered and 3 overdue open todos exist
+- **THEN** the sidebar includes a "Today" link with badge "3" appearing before "Resources"
+
+#### Scenario: Sidebar badge updates via hx-swap-oob after mark-done
+
+- **WHEN** a user marks an overdue todo done via HTMX from any page
+- **AND** the sidebar is included in the HTMX response via `hx-swap-oob`
+- **THEN** the Today overdue badge decrements (e.g., from "3" to "2")
+
+#### Scenario: Sidebar Today badge hidden when zero
+
+- **WHEN** any page is rendered and zero overdue open todos exist
+- **THEN** the sidebar includes a "Today" link with no badge
+
 ## Out of Scope
 
 - Real-time updates via WebSocket (HTMX polling or manual refresh only).

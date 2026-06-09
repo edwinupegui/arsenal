@@ -105,6 +105,28 @@ The system MUST display the current area name in the status bar at all times, al
 - **WHEN** the user switches from Resources to Todos
 - **THEN** the status bar changes from "Resources" to "Todos" with updated keybinding hints
 
+<!-- AMEND: phase-3-today -->
+
+### Requirement: Default landing surface changes to Today
+
+The system MUST open to `areaToday` by default on launch, replacing the previous `areaResources` default (phase 2). The `KeyLandingSurface` config key (from `config/keys.go` catalog) controls this behavior: valid values are `today` (default) and `resources`. If the value is `resources`, the TUI opens to `areaResources` (legacy). If the value is missing or invalid, the system falls back to `today`.
+(Previously: Default area on launch was `areaResources`.)
+
+#### Scenario: Default area on launch is Today
+
+- **WHEN** the TUI starts and `KeyLandingSurface` is not set
+- **THEN** the rendered area is Today
+
+#### Scenario: KeyLandingSurface=resources preserves legacy landing
+
+- **WHEN** the TUI starts and `KeyLandingSurface` is set to `resources`
+- **THEN** the rendered area is Resources (legacy behavior preserved)
+
+#### Scenario: KeyLandingSurface=today is explicit default
+
+- **WHEN** the TUI starts and `KeyLandingSurface` is set to `today`
+- **THEN** the rendered area is Today
+
 ## Out of Scope
 
 - Today view aggregation (phase 3; this phase only wires the placeholder).
