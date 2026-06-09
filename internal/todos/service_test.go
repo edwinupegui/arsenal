@@ -2,6 +2,8 @@ package todos_test
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 	"testing"
 
@@ -288,6 +290,144 @@ func TestUpdate_NonExistentFails(t *testing.T) {
 		Recurrence: todos.RecurrenceNone,
 	}); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestSoftDelete_Active(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := svc.SoftDelete(ctx, created.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+
+	q := store.New(db)
+	row, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if row.DeletedAt == nil {
+		t.Fatal("expected deleted_at to be set")
+	}
+}
+
+func TestSoftDelete_AlreadyDeleted(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := svc.SoftDelete(ctx, created.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+	// Second call should be a no-op (no error)
+	if err := svc.SoftDelete(ctx, created.Row.ID); err != nil {
+		t.Fatalf("SoftDelete again: %v", err)
+	}
+}
+
+func TestRestore_SoftDeleted(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.SoftDelete(ctx, created.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+
+	if err := svc.Restore(ctx, created.Row.ID); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+
+	q := store.New(db)
+	row, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if row.DeletedAt != nil {
+		t.Fatal("expected deleted_at to be nil after restore")
+	}
+}
+
+func TestRestore_Active(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Restoring an active todo is a no-op
+	if err := svc.Restore(ctx, created.Row.ID); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+
+	q := store.New(db)
+	row, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if row.DeletedAt != nil {
+		t.Fatal("expected deleted_at to be nil")
+	}
+}
+
+func TestPurge_AfterSoftDelete(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.SoftDelete(ctx, created.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+
+	if err := svc.Purge(ctx, created.Row.ID); err != nil {
+		t.Fatalf("Purge: %v", err)
+	}
+
+	q := store.New(db)
+	if _, err := q.GetTodo(ctx, created.Row.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("expected ErrNoRows, got %v", err)
+	}
+}
+
+func TestPurge_Active(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := svc.Purge(ctx, created.Row.ID); err != nil {
+		t.Fatalf("Purge: %v", err)
+	}
+
+	q := store.New(db)
+	if _, err := q.GetTodo(ctx, created.Row.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("expected ErrNoRows, got %v", err)
 	}
 }
 

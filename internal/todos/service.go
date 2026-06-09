@@ -127,6 +127,37 @@ func (s *Service) Update(ctx context.Context, id int64, in CreateInput) (*Todo, 
 	return out, err
 }
 
+// SoftDelete moves a todo to the trash by setting deleted_at.
+func (s *Service) SoftDelete(ctx context.Context, id int64) error {
+	return s.q.SoftDeleteTodo(ctx, id)
+}
+
+// Restore clears deleted_at on a trashed todo.
+func (s *Service) Restore(ctx context.Context, id int64) error {
+	return s.q.RestoreTodo(ctx, id)
+}
+
+// Purge permanently deletes a todo and (via FK cascades) its tag links.
+// Orphan tags are pruned inside the same transaction.
+func (s *Service) Purge(ctx context.Context, id int64) error {
+	return sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
+		if err := q.PurgeTodo(ctx, id); err != nil {
+			return fmt.Errorf("purge todo: %w", err)
+		}
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "todo",
+			OwnerID:      id,
+			Tags:         nil,
+			PruneOrphans: true,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // Get returns a todo and its tags. Returns sql.ErrNoRows if not found.
 func (s *Service) Get(ctx context.Context, id int64) (*Todo, error) {
 	row, err := s.q.GetTodo(ctx, id)
