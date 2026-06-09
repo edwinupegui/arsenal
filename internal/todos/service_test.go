@@ -431,6 +431,132 @@ func TestPurge_Active(t *testing.T) {
 	}
 }
 
+func TestMarkDone_OpenToDone(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := svc.MarkDone(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+
+	q := store.New(db)
+	row, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if row.Status != "done" {
+		t.Errorf("status = %q, want done", row.Status)
+	}
+	if row.DoneAt == nil {
+		t.Fatal("expected done_at to be set")
+	}
+}
+
+func TestMarkDone_AlreadyDone(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.MarkDone(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+
+	q := store.New(db)
+	before, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+
+	// Second call should be a no-op
+	if err := svc.MarkDone(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkDone again: %v", err)
+	}
+
+	after, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if after.UpdatedAt != before.UpdatedAt {
+		t.Errorf("updated_at changed from %q to %q", before.UpdatedAt, after.UpdatedAt)
+	}
+	if after.DoneAt == nil || before.DoneAt == nil || *after.DoneAt != *before.DoneAt {
+		t.Errorf("done_at changed")
+	}
+}
+
+func TestMarkOpen_DoneToOpen(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.MarkDone(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+
+	if err := svc.MarkOpen(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkOpen: %v", err)
+	}
+
+	q := store.New(db)
+	row, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if row.Status != "open" {
+		t.Errorf("status = %q, want open", row.Status)
+	}
+	if row.DoneAt != nil {
+		t.Errorf("done_at = %v, want nil", row.DoneAt)
+	}
+}
+
+func TestMarkOpen_AlreadyOpen(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	q := store.New(db)
+	before, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+
+	// MarkOpen on open todo is a no-op
+	if err := svc.MarkOpen(ctx, created.Row.ID); err != nil {
+		t.Fatalf("MarkOpen: %v", err)
+	}
+
+	after, err := q.GetTodo(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("GetTodo: %v", err)
+	}
+	if after.UpdatedAt != before.UpdatedAt {
+		t.Errorf("updated_at changed from %q to %q", before.UpdatedAt, after.UpdatedAt)
+	}
+	if after.DoneAt != nil {
+		t.Errorf("done_at = %v, want nil", after.DoneAt)
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

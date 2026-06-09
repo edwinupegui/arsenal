@@ -158,6 +158,16 @@ func (s *Service) Purge(ctx context.Context, id int64) error {
 	})
 }
 
+// MarkDone transitions an open todo to done.
+func (s *Service) MarkDone(ctx context.Context, id int64) error {
+	return s.q.MarkTodoDone(ctx, id)
+}
+
+// MarkOpen transitions a done todo to open.
+func (s *Service) MarkOpen(ctx context.Context, id int64) error {
+	return s.q.MarkTodoOpen(ctx, id)
+}
+
 // Get returns a todo and its tags. Returns sql.ErrNoRows if not found.
 func (s *Service) Get(ctx context.Context, id int64) (*Todo, error) {
 	row, err := s.q.GetTodo(ctx, id)
