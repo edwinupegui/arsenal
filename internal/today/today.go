@@ -28,6 +28,11 @@ func NewWithRegistry(registry *Registry) *Service {
 	return &Service{registry: registry}
 }
 
+// Register adds a provider to the service registry.
+func (s *Service) Register(p Provider) {
+	s.registry.Register(p)
+}
+
 // Build collects sections from all providers, orders them, truncates to
 // density limits, and sets ShowAllURL for overflow sections. Returns the
 // final ordered slice plus any provider errors for graceful degradation.

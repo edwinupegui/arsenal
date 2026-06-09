@@ -70,9 +70,9 @@ var Catalog = map[Key]KeyMeta{
 	},
 	KeyLandingSurface: {
 		Type:        TypeEnum,
-		Default:     "tui",
-		Description: "Default surface to open when `arsenal` is run with no args.",
-		EnumValues:  []string{"tui", "web"},
+		Default:     "today",
+		Description: "Default area shown when the TUI launches.",
+		EnumValues:  []string{"today", "resources"},
 	},
 	KeyActiveDomains: {
 		Type:        TypeList,

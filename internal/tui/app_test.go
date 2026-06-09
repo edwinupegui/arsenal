@@ -6,10 +6,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestDefaultAreaIsResources(t *testing.T) {
+func TestDefaultAreaIsToday(t *testing.T) {
 	app := New(nil)
-	if app.currentArea != areaResources {
-		t.Errorf("default area = %d, want %d (areaResources)", app.currentArea, areaResources)
+	if app.currentArea != areaToday {
+		t.Errorf("default area = %d, want %d (areaToday)", app.currentArea, areaToday)
 	}
 }
 
