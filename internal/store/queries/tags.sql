@@ -37,4 +37,8 @@ DELETE FROM tags WHERE id = ?;
 
 -- name: DeleteOrphanTags :exec
 DELETE FROM tags
-WHERE id NOT IN (SELECT DISTINCT tag_id FROM resource_tags);
+WHERE id NOT IN (
+    SELECT DISTINCT tag_id FROM resource_tags
+    UNION
+    SELECT DISTINCT tag_id FROM todo_tags
+);

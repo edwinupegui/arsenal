@@ -8,6 +8,12 @@ import (
 	"database/sql"
 )
 
+type ArsenalConfig struct {
+	K         string `json:"k"`
+	V         string `json:"v"`
+	UpdatedAt string `json:"updated_at"`
+}
+
 type Category struct {
 	ID        int64  `json:"id"`
 	Slug      string `json:"slug"`
@@ -48,7 +54,40 @@ type Tag struct {
 	Name string `json:"name"`
 }
 
+type Todo struct {
+	ID          int64   `json:"id"`
+	Title       string  `json:"title"`
+	Description *string `json:"description"`
+	Priority    string  `json:"priority"`
+	Status      string  `json:"status"`
+	DueDate     *string `json:"due_date"`
+	CategoryID  *int64  `json:"category_id"`
+	Notes       *string `json:"notes"`
+	Recurrence  string  `json:"recurrence"`
+	DoneAt      *string `json:"done_at"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+	DeletedAt   *string `json:"deleted_at"`
+}
+
+type TodoTag struct {
+	TodoID int64 `json:"todo_id"`
+	TagID  int64 `json:"tag_id"`
+}
+
+type TodosFt struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Notes       string `json:"notes"`
+	Tags        string `json:"tags"`
+}
+
 type VResourceTag struct {
 	ResourceID int64       `json:"resource_id"`
 	Tags       interface{} `json:"tags"`
+}
+
+type VTodoTag struct {
+	TodoID int64       `json:"todo_id"`
+	Tags   interface{} `json:"tags"`
 }
