@@ -258,7 +258,7 @@ Run existing TUI tests and manual smoke to confirm the `app.go` refactor didn't 
 
 ## Work Unit E — Web
 
-### E1. Define routes in todos.go
+### E1. Define routes in todos.go [x]
 Create `internal/web/todos.go` with route registration function. 11 routes per design §Web route contract: GET `/todos`, GET `/todos/new`, POST `/todos`, GET `/todos/{id}`, GET `/todos/{id}/edit`, POST `/todos/{id}`, POST `/todos/{id}/done`, POST `/todos/{id}/open`, POST `/todos/{id}/delete`, POST `/todos/{id}/restore`, POST `/todos/{id}/purge`. Wire into `internal/web/handlers.go` router setup.
 - **Files**: `internal/web/todos.go` (NEW), `internal/web/handlers.go` (MOD)
 - **Depends**: B8
@@ -267,7 +267,7 @@ Create `internal/web/todos.go` with route registration function. 11 routes per d
 - **Scenarios covered**: 0 (routing infrastructure)
 - **Specs**: todo-web (all routes)
 
-### E2. Implement list + new + create handlers
+### E2. Implement list + new + create handlers [x]
 Implement `listTodos` (GET `/todos` with filter query params), `newTodoForm` (GET `/todos/new`), `createTodo` (POST `/todos` with validation + redirect).
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E1, E6
@@ -276,7 +276,7 @@ Implement `listTodos` (GET `/todos` with filter query params), `newTodoForm` (GE
 - **Scenarios covered**: 3 — web:1,2,3,4
 - **Specs**: todo-web (List route, Create routes)
 
-### E3. Implement show + edit + update handlers
+### E3. Implement show + edit + update handlers [x]
 Implement `showTodo` (GET `/todos/{id}`), `editTodoForm` (GET `/todos/{id}/edit`), `updateTodo` (POST `/todos/{id}` with redirect).
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E2
@@ -285,7 +285,7 @@ Implement `showTodo` (GET `/todos/{id}`), `editTodoForm` (GET `/todos/{id}/edit`
 - **Scenarios covered**: 2 — web:5,6
 - **Specs**: todo-web (Show and edit routes)
 
-### E4. Implement status transition handlers (HTMX)
+### E4. Implement status transition handlers (HTMX) [x]
 Implement `markTodoDone` (POST `/todos/{id}/done`) and `markTodoOpen` (POST `/todos/{id}/open`). Return HTML card fragments for HTMX in-place swap.
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E3
@@ -294,7 +294,7 @@ Implement `markTodoDone` (POST `/todos/{id}/done`) and `markTodoOpen` (POST `/to
 - **Scenarios covered**: 2 — web:7,8
 - **Specs**: todo-web (Status transition routes), todo-status
 
-### E5. Implement delete/restore/purge handlers
+### E5. Implement delete/restore/purge handlers [x]
 Implement `softDeleteTodo` (POST, returns empty fragment for card removal), `restoreTodo` (POST, returns card fragment), `purgeTodo` (POST, redirect to `/todos`). Purge shows confirmation dialog.
 - **Files**: `internal/web/todos.go` (MOD)
 - **Depends**: E4
@@ -303,7 +303,7 @@ Implement `softDeleteTodo` (POST, returns empty fragment for card removal), `res
 - **Scenarios covered**: 3 — web:9,10,11
 - **Specs**: todo-web (Delete/restore/purge routes)
 
-### E6. Add todoVM to viewmodel.go
+### E6. Add todoVM to viewmodel.go [x]
 Add `todoVM` struct mirroring `resourceVM` pattern: unwraps `sql.NullString`/`NullInt64`, resolves tag names, category slugs, formatted dates. Add `toTodoVM()` converter.
 - **Files**: `internal/web/viewmodel.go` (MOD)
 - **Depends**: A5
@@ -312,7 +312,7 @@ Add `todoVM` struct mirroring `resourceVM` pattern: unwraps `sql.NullString`/`Nu
 - **Scenarios covered**: 1 — web:12
 - **Specs**: todo-web (View model)
 
-### E7. Create todos.html templates
+### E7. Create todos.html templates [x]
 Create `internal/web/templates/todos.html` with: list view (card-based, filter controls), show view (detail), form view (create/edit reuse with `kind=todo`), card fragment (for HTMX swaps). Recurrence displayed in all views.
 - **Files**: `internal/web/templates/todos.html` (NEW)
 - **Depends**: E6
@@ -321,7 +321,7 @@ Create `internal/web/templates/todos.html` with: list view (card-based, filter c
 - **Scenarios covered**: 4 — recurrence:4,5,6,7
 - **Specs**: todo-web (templates), todo-recurrence-placeholder (display)
 
-### E8. Update layout.html sidebar
+### E8. Update layout.html sidebar [x]
 Add "Todos" link to sidebar in `internal/web/templates/layout.html` with badge counts: open count, overdue count. Add `CountOpenTodos` query to `commonPage()`. Add `todoCountOpen` / `todoCountOverdue` to `pageData`.
 - **Files**: `internal/web/templates/layout.html` (MOD), `internal/web/handlers.go` (MOD)
 - **Depends**: E2, A5
@@ -330,7 +330,7 @@ Add "Todos" link to sidebar in `internal/web/templates/layout.html` with badge c
 - **Scenarios covered**: 2 — web:13,14
 - **Specs**: todo-web (Sidebar integration)
 
-### E9. HTMX partials for card swap
+### E9. HTMX partials for card swap [x]
 Ensure HTMX `hx-swap` attributes on todo cards work: mark-done/open swap outerHTML with updated card; soft-delete removes card; restore re-renders card. Sidebar counts refresh via `hx-swap-oob`.
 - **Files**: `internal/web/templates/todos.html` (MOD), `internal/web/todos.go` (MOD)
 - **Depends**: E4, E5, E8
