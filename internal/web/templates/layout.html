@@ -35,6 +35,10 @@
   <div class="app-shell{{if .Aside}} has-aside{{end}}">
     <aside class="sidebar" aria-label="Filters">
       <nav class="sidebar-section">
+        <a href="/today" class="sidebar-link {{if eq .Nav "today"}}is-active{{end}}">
+          <span class="sidebar-link-label">Today</span>
+          {{if gt .TodoCounts.Overdue 0}}<span class="sidebar-link-count">{{.TodoCounts.Overdue}}</span>{{end}}
+        </a>
         <a href="/resources" class="sidebar-link {{if .Sidebar.AllActive}}is-active{{end}}">
           <span class="sidebar-link-label">All resources</span>
           <span class="sidebar-link-count">{{.Counts.Active}}</span>
@@ -202,6 +206,10 @@
 
 {{define "sidebar-oob"}}
 <nav class="sidebar-section" id="sidebar-nav" hx-swap-oob="true">
+  <a href="/today" class="sidebar-link {{if eq .Nav "today"}}is-active{{end}}">
+    <span class="sidebar-link-label">Today</span>
+    {{if gt .TodoCounts.Overdue 0}}<span class="sidebar-link-count">{{.TodoCounts.Overdue}}</span>{{end}}
+  </a>
   <a href="/resources" class="sidebar-link {{if .Sidebar.AllActive}}is-active{{end}}">
     <span class="sidebar-link-label">All resources</span>
     <span class="sidebar-link-count">{{.Counts.Active}}</span>

@@ -161,3 +161,52 @@ func TestTodayPage_SectionIDs(t *testing.T) {
 		t.Errorf("expected item to have id attribute, got: %s", body)
 	}
 }
+
+func TestSidebar_TodayEntryWithBadge(t *testing.T) {
+	db := newTestDB(t)
+	srv := New(db, Options{})
+
+	// Seed 2 overdue todos
+	todoSvc := todos.New(db)
+	for i := 0; i < 2; i++ {
+		_, err := todoSvc.Create(t.Context(), todos.CreateInput{
+			Title:    "Overdue todo",
+			Priority: todos.PriorityHigh,
+			DueDate:  strPtr("2020-01-01"),
+		})
+		if err != nil {
+			t.Fatalf("create todo: %v", err)
+		}
+	}
+
+	req := httptest.NewRequest("GET", "/resources", nil)
+	rr := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if !strings.Contains(body, "Today") {
+		t.Errorf("expected sidebar to contain 'Today' entry, got: %s", body)
+	}
+	if !strings.Contains(body, "2</span>") {
+		t.Errorf("expected sidebar badge to show '2', got: %s", body)
+	}
+}
+
+func TestSidebar_BadgeHiddenWhenZero(t *testing.T) {
+	db := newTestDB(t)
+	srv := New(db, Options{})
+
+	req := httptest.NewRequest("GET", "/resources", nil)
+	rr := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if !strings.Contains(body, "Today") {
+		t.Errorf("expected sidebar to contain 'Today' entry, got: %s", body)
+	}
+	// The badge should not appear when overdue count is 0
+	// Check that the specific pattern with "Today" followed by a count badge is absent
+	if strings.Contains(body, "Today</span>\n          <span class=\"sidebar-link-count\">0</span>") {
+		t.Errorf("expected badge to be hidden when zero, got: %s", body)
+	}
+}
