@@ -179,7 +179,7 @@ Chain strategy: pending user decision
 
 ## Work Unit D — Web route + sidebar + HTMX OOB
 
-- [ ] D1. RED: GET /today handler test
+- [x] D1. RED: GET /today handler test
   Create `internal/web/today_test.go` with `httptest.NewServer`. Seed test DB with todos and resources, call `GET /today`, assert 200 + template content. Test empty state rendering.
   - Files: `internal/web/today_test.go` (NEW)
   - Depends: A5
@@ -187,7 +187,7 @@ Chain strategy: pending user decision
   - Tests: `TestTodayPage_Renders`, `TestTodayPage_ShowsAllSections`, `TestTodayPage_EmptyState`
   - Specs: REQ-TW-01 (/today route); Scenarios: Today page renders all sections
 
-- [ ] D2. GREEN: handler + render today.html
+- [x] D2. GREEN: handler + render today.html
   Create `internal/web/today.go` with `todayPage` handler. Call `todayService.Build(ctx)`, pass sections to `today.html` template. Create `internal/web/templates/today.html` with section rendering, item cards, density truncation, "show all →" links, and empty state (via `today.RenderEmptyState("web")`). Register route in `handlers.go`.
   - Files: `internal/web/today.go` (NEW), `internal/web/templates/today.html` (NEW), `internal/web/handlers.go` (MOD)
   - Depends: D1
@@ -195,7 +195,7 @@ Chain strategy: pending user decision
   - Tests: D1 tests now pass
   - Specs: REQ-TW-01, REQ-TW-03 (show-all links), REQ-TW-06 (commonPage isolation)
 
-- [ ] D3. Sidebar "Today" entry with overdue count badge
+- [x] D3. Sidebar "Today" entry with overdue count badge
   Modify `internal/web/templates/layout.html` to add "Today" link as first sidebar entry (before Resources, Todos). Add overdue badge using `CountOverdueTodos` from `commonPage()`. Hide badge when count is 0. Modify `internal/web/handlers.go` `commonPage()` to compute `todoCountOverdue` (reuse existing `countOverdueTodos` query).
   - Files: `internal/web/templates/layout.html` (MOD), `internal/web/handlers.go` (MOD)
   - Depends: D2
@@ -203,7 +203,7 @@ Chain strategy: pending user decision
   - Tests: `TestSidebar_TodayEntryWithBadge`, `TestSidebar_BadgeHiddenWhenZero`
   - Specs: REQ-TW-02 (sidebar entry + badge), REQ-TW-05 (sidebar ordering); Scenarios: Sidebar shows Today link with overdue badge, Sidebar hides badge when zero overdue
 
-- [ ] D4. HTMX partials: hx-swap-oob for badge refresh
+- [x] D4. HTMX partials: hx-swap-oob for badge refresh
   Modify `markTodoDone` handler in `internal/web/todos.go` to return an `hx-swap-oob` fragment for the sidebar badge after marking done. Add unique `id` attributes to each section in `today.html`. When a todo is marked done from `/today`, the response includes OOB updates for the affected section and the sidebar badge.
   - Files: `internal/web/todos.go` (MOD), `internal/web/templates/today.html` (MOD)
   - Depends: D2, D3
@@ -211,7 +211,7 @@ Chain strategy: pending user decision
   - Tests: Manual (HTMX)
   - Specs: REQ-TW-04 (hx-swap-oob); Scenario: Mark-done from Today refreshes section and badge
 
-- [ ] D5. Show-all links point to existing routes
+- [x] D5. Show-all links point to existing routes
   Verify "show all →" links in `today.html` match design: Overdue → `/todos?status=open&overdue=true`, Due Today → `/todos?status=open&due=today`, Upcoming → `/todos?status=open&due=upcoming`, Recent → `/resources`. No new routes created.
   - Files: `internal/web/templates/today.html` (MOD)
   - Depends: D2
@@ -223,7 +223,7 @@ Chain strategy: pending user decision
 
 ## Work Unit E — Final verification + CHANGELOG
 
-- [ ] E1. go build ./... clean
+- [x] E1. go build ./... clean
   Run `go build ./...` — must exit 0 with no errors.
   - Files: — (verification)
   - Depends: C6, D5
@@ -231,7 +231,7 @@ Chain strategy: pending user decision
   - Tests: `go build ./...`
   - Specs: All
 
-- [ ] E2. go test ./... -count=1 -race all green
+- [x] E2. go test ./... -count=1 -race all green
   Run `go test ./... -count=1 -race` — all tests pass (existing resources + todos + new today).
   - Files: — (verification)
   - Depends: E1
@@ -239,7 +239,7 @@ Chain strategy: pending user decision
   - Tests: `go test ./... -count=1 -race`
   - Specs: All (~41 scenarios)
 
-- [ ] E3. go vet ./... clean
+- [x] E3. go vet ./... clean
   Run `go vet ./...` — must exit 0.
   - Files: — (verification)
   - Depends: E2
@@ -247,7 +247,7 @@ Chain strategy: pending user decision
   - Tests: `go vet ./...`
   - Specs: All
 
-- [ ] E4. make sqlc no drift
+- [x] E4. make sqlc no drift
   Run `make sqlc` — must produce no diff (no new queries added in phase 3).
   - Files: — (verification)
   - Depends: E3
@@ -255,7 +255,7 @@ Chain strategy: pending user decision
   - Tests: `make sqlc && git diff --exit-code`
   - Specs: All
 
-- [ ] E5. CHANGELOG entry for phase 3
+- [x] E5. CHANGELOG entry for phase 3
   Add phase 3 entry to `CHANGELOG.md` documenting: 5 new capabilities (today-view, today-providers, today-empty-state, today-tui, today-web), 3 surfaces (TUI, web, CLI), Provider registry pattern, default landing change, no new migrations.
   - Files: `CHANGELOG.md` (MOD)
   - Depends: E2
@@ -263,7 +263,7 @@ Chain strategy: pending user decision
   - Tests: Manual
   - Specs: — (documentation)
 
-- [ ] E6. Update FE/BE tasks markers; final commit
+- [x] E6. Update FE/BE tasks markers; final commit
   Update any project tracking docs (if present) to mark phase 3 tasks complete. Commit with `feat(today): add Today cross-domain view with provider registry`. Branch `feat/phase-3-today` ready for PR to `develop`.
   - Files: — (commit)
   - Depends: E5

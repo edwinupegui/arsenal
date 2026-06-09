@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Today cross-domain view** — `internal/today/` package with `Provider` interface, `Registry`, `Service`, and two concrete providers (`TodosProvider`, `ResourcesProvider`). Aggregates overdue todos, due-today todos, upcoming todos, and recent resources into a single unified view.
+- **TUI Today area** — `areaToday` is no longer a placeholder; renders real aggregated data with `r` key refresh and `n` key to switch to new-todo form. Default landing surface changed from `areaResources` to `areaToday`.
+- **Web Today route** — `GET /today` renders the Today view with sectioned cards, density truncation (5 items per section), and "show all" links. Sidebar includes a "Today" entry with overdue count badge that updates via `hx-swap-oob` after mark-done/open actions.
 - **Todos lifecycle & status management** — add, edit, mark done, soft-delete, restore, and hard-delete todos.
 - **Todos listing & search** — list all todos with filtering by status, priority, and tags; full-text search via SQLite FTS5.
 - **Tags support** — assign and filter todos by tags; validates shared domain helpers (`domain.WithTags`) with a second domain.
@@ -20,9 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **KeyLandingSurface enum values** — expanded from `["tui", "web"]` to `["today", "resources"]`. **Backward incompatible**: users with old config values (`tui` or `web`) will fall back to the default `today`. No data migration required; config store validates on read.
 - **Cross-cutting validation** — shared `domain.WithTags` helper now validated by both `resources` and `todos` domains.
+- **Provider registry pattern** — validates ADR-0002 Change 4: cross-domain aggregation via independent providers with graceful degradation.
+
+### Known limitations
+
+- **Timezone handling** — `date('now')` in SQLite is UTC. Due-today comparison may be off by hours for non-UTC users. Documented; separate ADR planned for v3.0.1.
+- **TUI new-todo form** — `n` key in `areaToday` switches to `areaTodos` (no inline form yet; follow-up in v3.x).
 
 ### References
 
-- ADR-0002: Sequencing and phase-2 OpenSpec change.
+- ADR-0002: Sequencing and phase-3 OpenSpec change.
 
