@@ -16,6 +16,7 @@ import (
 
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
 // areaID selects which functional area is active.
@@ -73,6 +74,31 @@ type App struct {
 
 	statusMsg string
 	statusErr error
+
+	// Todos area state
+	todosService     *todos.Service
+	todoList         list.Model
+	todoDetail       todoDetailModel
+	todoConfirm      confirmModel
+	todoSearchIn     textinput.Model
+	todoSearchActive string
+	todoShowTrashed  bool
+	todoState        todoViewState
+	todoMutated      todoMutatedMsg
+}
+
+type todoViewState int
+
+const (
+	todoStateList todoViewState = iota
+	todoStateDetail
+	todoStateSearchInput
+	todoStateConfirmDelete
+)
+
+type todoMutatedMsg struct {
+	status string
+	err    error
 }
 
 // New builds an App backed by the given DB. The caller keeps ownership of the
@@ -105,6 +131,18 @@ func New(db *sql.DB) App {
 	si.Prompt = "/ "
 	si.CharLimit = 200
 
+	todoList := list.New(nil, delegate, 0, 0)
+	todoList.Title = "Todos"
+	todoList.SetShowStatusBar(true)
+	todoList.SetFilteringEnabled(true)
+	todoList.SetShowHelp(true)
+	todoList.Styles.Title = titleStyle
+
+	todoSearch := textinput.New()
+	todoSearch.Placeholder = "search todos…"
+	todoSearch.Prompt = "/ "
+	todoSearch.CharLimit = 200
+
 	return App{
 		state:       viewList,
 		currentArea: areaResources,
@@ -115,6 +153,11 @@ func New(db *sql.DB) App {
 		list:        l,
 		detail:      newDetailModel(),
 		searchIn:    si,
+		// Todos area initialized here
+		todosService: todos.New(db),
+		todoList:     todoList,
+		todoDetail:   newTodoDetailModel(),
+		todoSearchIn: todoSearch,
 	}
 }
 
@@ -145,6 +188,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.list.SetSize(msg.Width, listH)
 		a.detail.SetSize(msg.Width, listH)
+		a.todoList.SetSize(msg.Width, listH)
+		a.todoDetail.SetSize(msg.Width, listH)
 		return a, nil
 
 	case resourcesLoadedMsg:
@@ -214,15 +259,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	switch a.state {
-	case viewDetail:
-		return a.updateDetail(msg)
-	case viewConfirmDelete:
-		return a.updateConfirm(msg)
-	case viewSearchInput:
-		return a.updateSearchInput(msg)
+	switch a.currentArea {
+	case areaTodos:
+		return a.updateTodos(msg)
+	case areaResources:
+		switch a.state {
+		case viewDetail:
+			return a.updateDetail(msg)
+		case viewConfirmDelete:
+			return a.updateConfirm(msg)
+		case viewSearchInput:
+			return a.updateSearchInput(msg)
+		default:
+			return a.updateList(msg)
+		}
 	default:
-		return a.updateList(msg)
+		return a, nil
 	}
 }
 
@@ -359,7 +411,23 @@ func (a App) View() string {
 	case areaCalendar:
 		body = placeholderView("Calendar (coming soon — v3.x)", a.width, a.height)
 	case areaTodos:
-		body = placeholderView("Todos (coming soon — phase 3)", a.width, a.height)
+		switch a.todoState {
+		case todoStateDetail:
+			body = a.todoDetail.View()
+		case todoStateConfirmDelete:
+			body = a.todoConfirm.view(a.width, a.height)
+		case todoStateSearchInput:
+			body = renderSearchOverlay(a.todoSearchIn.View(), a.width, a.height)
+		default:
+			header := ""
+			if a.todoShowTrashed {
+				header = trashBannerStyle.Render(" TRASH ") + "\n"
+			}
+			if a.todoSearchActive != "" {
+				header += mutedStyle.Render(fmt.Sprintf("  search: %q  (c to clear)", a.todoSearchActive)) + "\n"
+			}
+			body = header + a.todoList.View()
+		}
 	case areaResources:
 		switch a.state {
 		case viewDetail:
@@ -437,6 +505,8 @@ func (a App) loadCurrentAreaCmd() tea.Cmd {
 	switch a.currentArea {
 	case areaResources:
 		return loadResourcesCmd(a.queries, a.showTrashed)
+	case areaTodos:
+		return loadTodosCmd(a.todosService, a.todoShowTrashed, a.todoSearchActive)
 	default:
 		return nil
 	}
