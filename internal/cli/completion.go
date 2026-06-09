@@ -172,11 +172,7 @@ func completeTodoIDs(cmd *cobra.Command, args []string, _ string) ([]string, cob
 
 // completePriorities is the static priority enum.
 func completePriorities(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-	out := make([]string, 0, 3)
-	for _, p := range []string{"low", "med", "high"} {
-		out = append(out, p)
-	}
-	return out, cobra.ShellCompDirectiveNoFileComp
+	return []string{"low", "med", "high"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 // completeStatuses is the static status enum.
@@ -186,11 +182,7 @@ func completeStatuses(_ *cobra.Command, _ []string, _ string) ([]string, cobra.S
 
 // completeRecurrences is the static recurrence enum.
 func completeRecurrences(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-	out := make([]string, 0, 4)
-	for _, r := range []string{"none", "daily", "weekly", "monthly"} {
-		out = append(out, r)
-	}
-	return out, cobra.ShellCompDirectiveNoFileComp
+	return []string{"none", "daily", "weekly", "monthly"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 // truncateForCompletion shrinks long titles so the description column in
