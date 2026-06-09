@@ -35,11 +35,12 @@ type Querier interface {
 	ListResources(ctx context.Context, arg ListResourcesParams) ([]Resource, error)
 	ListTags(ctx context.Context) ([]ListTagsRow, error)
 	ListTagsForResource(ctx context.Context, resourceID int64) ([]Tag, error)
+	ListTagsForTodo(ctx context.Context, todoID int64) ([]Tag, error)
 	ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, error)
+	ListTodosBasic(ctx context.Context, arg ListTodosBasicParams) ([]ListTodosBasicRow, error)
 	ListTodosByStatus(ctx context.Context, status string) ([]Todo, error)
 	ListTodosDueBefore(ctx context.Context, dueDate *string) ([]Todo, error)
 	ListTodosDueBetween(ctx context.Context, arg ListTodosDueBetweenParams) ([]Todo, error)
-	ListTodosFiltered(ctx context.Context, arg ListTodosFilteredParams) ([]ListTodosFilteredRow, error)
 	ListTrashedResources(ctx context.Context) ([]Resource, error)
 	ListTrashedTodos(ctx context.Context) ([]Todo, error)
 	MarkTodoDone(ctx context.Context, id int64) error

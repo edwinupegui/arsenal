@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/sqliteutil"
@@ -181,28 +182,43 @@ func (s *Service) Get(ctx context.Context, id int64) (*Todo, error) {
 	return &Todo{Row: row, Tags: tags}, nil
 }
 
+// List returns todos matching the filter.
+func (s *Service) List(ctx context.Context, f ListFilter) ([]*Todo, error) {
+	var today string
+	if f.OnlyOverdue {
+		today = time.Now().UTC().Format("2006-01-02")
+	}
+	rows, err := s.q.ListTodosFiltered(ctx, store.TodoListFilter{
+		CategorySlug: f.CategorySlug,
+		TagName:      f.TagName,
+		Status:       string(f.Status),
+		Priority:     string(f.Priority),
+		OnlyOverdue:  f.OnlyOverdue,
+		Today:        today,
+		DueBefore:    f.DueBefore,
+		Trashed:      f.Trashed,
+		Limit:        f.Limit,
+		Offset:       f.Offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Todo, len(rows))
+	for i, lt := range rows {
+		out[i] = &Todo{Row: lt.Todo, Tags: lt.Tags}
+	}
+	return out, nil
+}
+
 // tagsFor returns the tag names attached to a todo, sorted by name.
 func (s *Service) tagsFor(ctx context.Context, id int64) ([]string, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT t.name FROM tags t
-		JOIN todo_tags tt ON tt.tag_id = t.id
-		WHERE tt.todo_id = ?
-		ORDER BY t.name ASC
-	`, id)
+	rows, err := s.q.ListTagsForTodo(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
-	defer rows.Close()
-	out := make([]string, 0)
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, fmt.Errorf("scan tag: %w", err)
-		}
-		out = append(out, name)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate tags: %w", err)
+	out := make([]string, len(rows))
+	for i, t := range rows {
+		out[i] = t.Name
 	}
 	return out, nil
 }

@@ -75,7 +75,7 @@ ORDER BY due_date ASC;
 -- name: CountOpenTodos :one
 SELECT COUNT(*) FROM todos WHERE status = 'open' AND deleted_at IS NULL;
 
--- name: ListTodosFiltered :many
+-- name: ListTodosBasic :many
 SELECT t.*, c.name AS category_name, c.slug AS category_slug,
        (
          SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')

@@ -557,6 +557,299 @@ func TestMarkOpen_AlreadyOpen(t *testing.T) {
 	}
 }
 
+func TestList_DefaultOpen(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "open todo 1"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "open todo 2"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// Mark one done
+	q := store.New(db)
+	rows, err := q.ListTodos(ctx, store.ListTodosParams{Limit: 100, Offset: 0})
+	if err != nil {
+		t.Fatalf("ListTodos: %v", err)
+	}
+	if len(rows) < 2 {
+		t.Fatalf("expected at least 2 todos, got %d", len(rows))
+	}
+	if err := svc.MarkDone(ctx, rows[0].ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+
+	// Default list should return both active todos (open + done)
+	got, err := svc.List(ctx, todos.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("len = %d, want 2", len(got))
+	}
+}
+
+func TestList_FilterDone(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	openTodo, err := svc.Create(ctx, todos.CreateInput{Title: "open"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	doneTodo, err := svc.Create(ctx, todos.CreateInput{Title: "done"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.MarkDone(ctx, doneTodo.Row.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+	_ = openTodo
+
+	got, err := svc.List(ctx, todos.ListFilter{Status: todos.StatusDone})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != doneTodo.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, doneTodo.Row.ID)
+	}
+}
+
+func TestList_FilterPriority(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	_, err := svc.Create(ctx, todos.CreateInput{Title: "low", Priority: todos.PriorityLow})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	highTodo, err := svc.Create(ctx, todos.CreateInput{Title: "high", Priority: todos.PriorityHigh})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Priority: todos.PriorityHigh})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != highTodo.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, highTodo.Row.ID)
+	}
+}
+
+func TestList_FilterCategory(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+	q := store.New(db)
+
+	cat, err := q.CreateCategory(ctx, store.CreateCategoryParams{Slug: "work", Name: "Work", Icon: "", SortOrder: 1})
+	if err != nil {
+		t.Fatalf("CreateCategory: %v", err)
+	}
+	withCat, err := svc.Create(ctx, todos.CreateInput{Title: "with cat", CategoryID: &cat.ID})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "no cat"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{CategorySlug: "work"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != withCat.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, withCat.Row.ID)
+	}
+}
+
+func TestList_FilterTag(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	withTag, err := svc.Create(ctx, todos.CreateInput{Title: "tagged", Tags: []string{"urgent"}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "untagged"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{TagName: "urgent"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != withTag.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, withTag.Row.ID)
+	}
+}
+
+func TestList_FilterOverdue(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	past := "2020-01-01"
+	future := "2099-01-01"
+	overdue, err := svc.Create(ctx, todos.CreateInput{Title: "overdue", DueDate: &past})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "future", DueDate: &future}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "no due"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// Mark overdue done — it should not appear
+	if err := svc.MarkDone(ctx, overdue.Row.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+	// Create another overdue that is open
+	overdueOpen, err := svc.Create(ctx, todos.CreateInput{Title: "overdue open", DueDate: &past})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{OnlyOverdue: true})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != overdueOpen.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, overdueOpen.Row.ID)
+	}
+}
+
+func TestList_FilterDueBefore(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	past := "2020-01-01"
+	future := "2099-01-01"
+	before, err := svc.Create(ctx, todos.CreateInput{Title: "before", DueDate: &past})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "after", DueDate: &future}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{DueBefore: "2025-01-01"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != before.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, before.Row.ID)
+	}
+}
+
+func TestList_FilterTrashed(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	trashed, err := svc.Create(ctx, todos.CreateInput{Title: "trashed"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.SoftDelete(ctx, trashed.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "active"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Trashed: true})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != trashed.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, trashed.Row.ID)
+	}
+}
+
+func TestList_SortOrder(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	// Create todos with and without due dates
+	d1 := "2026-06-01"
+	d2 := "2026-06-02"
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "no due"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "due 2", DueDate: &d2}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "due 1", DueDate: &d1}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3", len(got))
+	}
+	// Due dates ascending, then no due date
+	wantOrder := []string{"due 1", "due 2", "no due"}
+	for i, want := range wantOrder {
+		if got[i].Row.Title != want {
+			t.Errorf("[%d] title = %q, want %q", i, got[i].Row.Title, want)
+		}
+	}
+}
+
+func TestList_Pagination(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	for i := 0; i < 5; i++ {
+		if _, err := svc.Create(ctx, todos.CreateInput{Title: "todo"}); err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Limit: 2, Offset: 1})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len = %d, want 2", len(got))
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

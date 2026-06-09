@@ -170,6 +170,87 @@ func (q *Queries) ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, e
 	return items, nil
 }
 
+const listTodosBasic = `-- name: ListTodosBasic :many
+SELECT t.id, t.title, t.description, t.priority, t.status, t.due_date, t.category_id, t.notes, t.recurrence, t.done_at, t.created_at, t.updated_at, t.deleted_at, c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM todo_tags tt
+         JOIN tags tag ON tag.id = tt.tag_id
+         WHERE tt.todo_id = t.id
+       ) AS tag_csv
+FROM todos t
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE (COALESCE(?1, 0) = 0 AND t.deleted_at IS NULL)
+   OR (COALESCE(?1, 0) = 1 AND t.deleted_at IS NOT NULL)
+ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC, t.id DESC
+LIMIT ?3 OFFSET ?2
+`
+
+type ListTodosBasicParams struct {
+	Trashed interface{} `json:"trashed"`
+	Offset  *int64      `json:"offset"`
+	Limit   *int64      `json:"limit"`
+}
+
+type ListTodosBasicRow struct {
+	ID           int64       `json:"id"`
+	Title        string      `json:"title"`
+	Description  *string     `json:"description"`
+	Priority     string      `json:"priority"`
+	Status       string      `json:"status"`
+	DueDate      *string     `json:"due_date"`
+	CategoryID   *int64      `json:"category_id"`
+	Notes        *string     `json:"notes"`
+	Recurrence   string      `json:"recurrence"`
+	DoneAt       *string     `json:"done_at"`
+	CreatedAt    string      `json:"created_at"`
+	UpdatedAt    string      `json:"updated_at"`
+	DeletedAt    *string     `json:"deleted_at"`
+	CategoryName *string     `json:"category_name"`
+	CategorySlug *string     `json:"category_slug"`
+	TagCsv       interface{} `json:"tag_csv"`
+}
+
+func (q *Queries) ListTodosBasic(ctx context.Context, arg ListTodosBasicParams) ([]ListTodosBasicRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTodosBasic, arg.Trashed, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTodosBasicRow{}
+	for rows.Next() {
+		var i ListTodosBasicRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Priority,
+			&i.Status,
+			&i.DueDate,
+			&i.CategoryID,
+			&i.Notes,
+			&i.Recurrence,
+			&i.DoneAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CategoryName,
+			&i.CategorySlug,
+			&i.TagCsv,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTodosByStatus = `-- name: ListTodosByStatus :many
 SELECT id, title, description, priority, status, due_date, category_id, notes, recurrence, done_at, created_at, updated_at, deleted_at FROM todos
 WHERE status = ? AND deleted_at IS NULL
@@ -290,87 +371,6 @@ func (q *Queries) ListTodosDueBetween(ctx context.Context, arg ListTodosDueBetwe
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTodosFiltered = `-- name: ListTodosFiltered :many
-SELECT t.id, t.title, t.description, t.priority, t.status, t.due_date, t.category_id, t.notes, t.recurrence, t.done_at, t.created_at, t.updated_at, t.deleted_at, c.name AS category_name, c.slug AS category_slug,
-       (
-         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
-         FROM todo_tags tt
-         JOIN tags tag ON tag.id = tt.tag_id
-         WHERE tt.todo_id = t.id
-       ) AS tag_csv
-FROM todos t
-LEFT JOIN categories c ON c.id = t.category_id
-WHERE (COALESCE(?1, 0) = 0 AND t.deleted_at IS NULL)
-   OR (COALESCE(?1, 0) = 1 AND t.deleted_at IS NOT NULL)
-ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC, t.id DESC
-LIMIT ?3 OFFSET ?2
-`
-
-type ListTodosFilteredParams struct {
-	Trashed interface{} `json:"trashed"`
-	Offset  *int64      `json:"offset"`
-	Limit   *int64      `json:"limit"`
-}
-
-type ListTodosFilteredRow struct {
-	ID           int64       `json:"id"`
-	Title        string      `json:"title"`
-	Description  *string     `json:"description"`
-	Priority     string      `json:"priority"`
-	Status       string      `json:"status"`
-	DueDate      *string     `json:"due_date"`
-	CategoryID   *int64      `json:"category_id"`
-	Notes        *string     `json:"notes"`
-	Recurrence   string      `json:"recurrence"`
-	DoneAt       *string     `json:"done_at"`
-	CreatedAt    string      `json:"created_at"`
-	UpdatedAt    string      `json:"updated_at"`
-	DeletedAt    *string     `json:"deleted_at"`
-	CategoryName *string     `json:"category_name"`
-	CategorySlug *string     `json:"category_slug"`
-	TagCsv       interface{} `json:"tag_csv"`
-}
-
-func (q *Queries) ListTodosFiltered(ctx context.Context, arg ListTodosFilteredParams) ([]ListTodosFilteredRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTodosFiltered, arg.Trashed, arg.Offset, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListTodosFilteredRow{}
-	for rows.Next() {
-		var i ListTodosFilteredRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Description,
-			&i.Priority,
-			&i.Status,
-			&i.DueDate,
-			&i.CategoryID,
-			&i.Notes,
-			&i.Recurrence,
-			&i.DoneAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.CategoryName,
-			&i.CategorySlug,
-			&i.TagCsv,
 		); err != nil {
 			return nil, err
 		}

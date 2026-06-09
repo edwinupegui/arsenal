@@ -29,6 +29,13 @@ JOIN resource_tags rt ON rt.tag_id = t.id
 WHERE rt.resource_id = ?
 ORDER BY t.name ASC;
 
+-- name: ListTagsForTodo :many
+SELECT t.*
+FROM tags t
+JOIN todo_tags tt ON tt.tag_id = t.id
+WHERE tt.todo_id = ?
+ORDER BY t.name ASC;
+
 -- name: RenameTag :one
 UPDATE tags SET name = ? WHERE id = ? RETURNING *;
 
