@@ -18,6 +18,25 @@ import (
 	"github.com/edwinupegui/arsenal/internal/store"
 )
 
+// areaID selects which functional area is active.
+type areaID int
+
+const (
+	areaToday areaID = iota
+	areaResources
+	areaTodos
+	areaFinance
+	areaCalendar
+)
+
+var areaNames = map[areaID]string{
+	areaToday:     "Today",
+	areaResources: "Resources",
+	areaTodos:     "Todos",
+	areaFinance:   "Finance",
+	areaCalendar:  "Calendar",
+}
+
 // viewState selects which sub-view the runtime renders.
 type viewState int
 
@@ -33,6 +52,8 @@ const (
 // `View()` returns.
 type App struct {
 	state viewState
+
+	currentArea areaID
 
 	db      *sql.DB
 	queries *store.Queries
@@ -85,14 +106,15 @@ func New(db *sql.DB) App {
 	si.CharLimit = 200
 
 	return App{
-		state:    viewList,
-		db:       db,
-		queries:  store.New(db),
-		service:  resources.New(db),
-		keys:     keys,
-		list:     l,
-		detail:   newDetailModel(),
-		searchIn: si,
+		state:       viewList,
+		currentArea: areaResources,
+		db:          db,
+		queries:     store.New(db),
+		service:     resources.New(db),
+		keys:        keys,
+		list:        l,
+		detail:      newDetailModel(),
+		searchIn:    si,
 	}
 }
 
@@ -164,6 +186,32 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errorMsg:
 		a.statusErr = msg.err
 		return a, nil
+	}
+
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch {
+		case key.Matches(km, a.keys.Tab):
+			a.currentArea = (a.currentArea + 1) % 5
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.ShiftTab):
+			a.currentArea = (a.currentArea + 4) % 5
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.JumpToday):
+			a.currentArea = areaToday
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.JumpResources):
+			a.currentArea = areaResources
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.JumpTodos):
+			a.currentArea = areaTodos
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.JumpFinance):
+			a.currentArea = areaFinance
+			return a, a.loadCurrentAreaCmd()
+		case key.Matches(km, a.keys.JumpCalendar):
+			a.currentArea = areaCalendar
+			return a, a.loadCurrentAreaCmd()
+		}
 	}
 
 	switch a.state {
@@ -362,6 +410,16 @@ func (a App) selectedItem() (resourceItem, bool) {
 	}
 	it, ok := cur.(resourceItem)
 	return it, ok
+}
+
+// loadCurrentAreaCmd returns a command to load data for the current area.
+func (a App) loadCurrentAreaCmd() tea.Cmd {
+	switch a.currentArea {
+	case areaResources:
+		return loadResourcesCmd(a.queries, a.showTrashed)
+	default:
+		return nil
+	}
 }
 
 // --- commands ---------------------------------------------------------------
