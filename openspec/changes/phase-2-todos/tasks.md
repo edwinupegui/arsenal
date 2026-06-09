@@ -200,7 +200,7 @@ Add `root.AddCommand(newTodoCmd())` in `internal/cli/root.go`. Add todo completi
 
 ## Work Unit D — TUI
 
-### D1. Add currentArea enum to app.go
+### D1. Add currentArea enum to app.go [x]
 Add `areaID` type and constants (`areaToday`, `areaResources`, `areaTodos`, `areaFinance`, `areaCalendar`) to `internal/tui/app.go`. Add `currentArea` field to `App` struct. Default: `areaResources`.
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: B2
@@ -209,7 +209,7 @@ Add `areaID` type and constants (`areaToday`, `areaResources`, `areaTodos`, `are
 - **Scenarios covered**: 1 — tui:1
 - **Specs**: todo-tui (Area enum)
 
-### D2. Implement key routing for area switching
+### D2. Implement key routing for area switching [x]
 Add `Tab`/`Shift+Tab` cycle (forward/backward with wrap-around) and `1`-`5` direct jump to `App.Update()`. Status bar renders current area name + key hints.
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D1
@@ -218,7 +218,7 @@ Add `Tab`/`Shift+Tab` cycle (forward/backward with wrap-around) and `1`-`5` dire
 - **Scenarios covered**: 4 — tui:2,3,4,5
 - **Specs**: todo-tui (Tab cycling, direct jump)
 
-### D3. Add placeholder renderers for Today/Finance/Calendar
+### D3. Add placeholder renderers for Today/Finance/Calendar [x]
 Add placeholder `View()` branches for non-functional areas: Today → "Today (coming soon — phase 3)", Finance → "Finance (coming soon — v3.x)", Calendar → "Calendar (coming soon — v3.x)".
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D2
@@ -227,7 +227,7 @@ Add placeholder `View()` branches for non-functional areas: Today → "Today (co
 - **Scenarios covered**: 2 — tui:6,7
 - **Specs**: todo-tui (Placeholder areas)
 
-### D4. Implement todos sub-model
+### D4. Implement todos sub-model [x]
 Create `internal/tui/todos.go` with todo sub-model: scrollable list, filter by status, search box, keybindings (`x`=done/open, `d`=soft-delete, `r`=restore in trash, `enter`=detail, `n`=new form). Uses `todos.Service` for all operations.
 - **Files**: `internal/tui/todos.go` (NEW)
 - **Depends**: D2, B8
@@ -236,7 +236,7 @@ Create `internal/tui/todos.go` with todo sub-model: scrollable list, filter by s
 - **Scenarios covered**: 5 — tui:8,9,10,11,12
 - **Specs**: todo-tui (Todo sub-model), todo-status, todo-lifecycle
 
-### D5. Status bar shows current area
+### D5. Status bar shows current area [x]
 Update `App.View()` status bar to display current area name + area-switching key hints (`Tab`/`Shift+Tab`/`1-5`).
 - **Files**: `internal/tui/app.go` (MOD)
 - **Depends**: D2
@@ -245,7 +245,7 @@ Update `App.View()` status bar to display current area name + area-switching key
 - **Scenarios covered**: 1 — tui:13
 - **Specs**: todo-tui (Status bar)
 
-### D6. Verify Resources area still works
+### D6. Verify Resources area still works [x]
 Run existing TUI tests and manual smoke to confirm the `app.go` refactor didn't break the Resources area (list, detail, search, trash toggle, star/unstar).
 - **Files**: — (verification only)
 - **Depends**: D4, D5
