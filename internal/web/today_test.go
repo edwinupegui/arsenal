@@ -258,6 +258,32 @@ func TestMarkTodoDone_UpdatesTodayBadgeViaOOB(t *testing.T) {
 	}
 }
 
+func TestShowAllLinks_AcceptQueryParams(t *testing.T) {
+	db := newTestDB(t)
+	srv := New(db, Options{})
+
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"overdue", "/todos?status=open&overdue=true"},
+		{"due today", "/todos?status=open&due=today"},
+		{"upcoming", "/todos?status=open&due=upcoming"},
+		{"recent resources", "/resources"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", c.path, nil)
+			rr := httptest.NewRecorder()
+			srv.Handler().ServeHTTP(rr, req)
+			if rr.Code != http.StatusOK {
+				t.Fatalf("GET %s: want %d, got %d", c.path, http.StatusOK, rr.Code)
+			}
+		})
+	}
+}
+
 func TestMarkTodoOpen_UpdatesTodayBadgeViaOOB(t *testing.T) {
 	db := newTestDB(t)
 	srv := New(db, Options{})
