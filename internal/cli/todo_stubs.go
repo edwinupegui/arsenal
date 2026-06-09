@@ -2,7 +2,6 @@ package cli
 
 import "github.com/spf13/cobra"
 
-func newTodoListCmd() *cobra.Command  { return &cobra.Command{Use: "list"} }
 func newTodoShowCmd() *cobra.Command  { return &cobra.Command{Use: "show"} }
 func newTodoDoneCmd() *cobra.Command   { return &cobra.Command{Use: "done"} }
 func newTodoOpenCmd() *cobra.Command   { return &cobra.Command{Use: "open"} }
