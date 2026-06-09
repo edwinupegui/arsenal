@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/edwinupegui/arsenal/internal/domain"
+	"github.com/edwinupegui/arsenal/internal/sqliteutil"
 	"github.com/edwinupegui/arsenal/internal/store"
 )
 
@@ -72,6 +73,9 @@ type UpdateInput struct {
 // Create validates input, opens a transaction, inserts the resource,
 // upserts and attaches tags, and commits. On any error the transaction is
 // rolled back and no rows are written.
+//
+// Create does NOT prune orphan tags — only Update and Purge do, matching the
+// pre-refactor behavior.
 func (s *Service) Create(ctx context.Context, in CreateInput) (Resource, error) {
 	if err := validateCreate(in); err != nil {
 		return Resource{}, err
@@ -82,7 +86,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Resource, error) 
 	}
 
 	var out Resource
-	err = withTx(ctx, s.db, func(q *store.Queries) error {
+	err = sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
 		row, err := q.CreateResource(ctx, store.CreateResourceParams{
 			Title:       strings.TrimSpace(in.Title),
 			Url:         strings.TrimSpace(in.URL),
@@ -96,7 +101,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Resource, error) 
 		if err != nil {
 			return fmt.Errorf("insert resource: %w", err)
 		}
-		if err := attachTags(ctx, q, row.ID, tags); err != nil {
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "resource",
+			OwnerID:      row.ID,
+			Tags:         tags,
+			PruneOrphans: false,
+		}); err != nil {
 			return err
 		}
 		out = Resource{Row: row, Tags: tags}
@@ -107,6 +118,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Resource, error) 
 
 // Import is the migrate-only variant of Create that preserves the original
 // created_at / updated_at / deleted_at values from a legacy row.
+//
+// Like Create, Import does NOT prune orphan tags.
 func (s *Service) Import(ctx context.Context, in ImportInput) (Resource, error) {
 	if err := validateCreate(in.CreateInput); err != nil {
 		return Resource{}, err
@@ -123,7 +136,8 @@ func (s *Service) Import(ctx context.Context, in ImportInput) (Resource, error) 
 	}
 
 	var out Resource
-	err = withTx(ctx, s.db, func(q *store.Queries) error {
+	err = sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
 		row, err := q.CreateResourceWithTimestamps(ctx, store.CreateResourceWithTimestampsParams{
 			Title:       strings.TrimSpace(in.Title),
 			Url:         strings.TrimSpace(in.URL),
@@ -140,7 +154,13 @@ func (s *Service) Import(ctx context.Context, in ImportInput) (Resource, error) 
 		if err != nil {
 			return fmt.Errorf("insert resource: %w", err)
 		}
-		if err := attachTags(ctx, q, row.ID, tags); err != nil {
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "resource",
+			OwnerID:      row.ID,
+			Tags:         tags,
+			PruneOrphans: false,
+		}); err != nil {
 			return err
 		}
 		out = Resource{Row: row, Tags: tags}
@@ -151,7 +171,9 @@ func (s *Service) Import(ctx context.Context, in ImportInput) (Resource, error) 
 
 // Update replaces the mutable fields of resource id. Tag updates are handled
 // as detach-all-then-reattach for simplicity — diffing 30-tag sets is not
-// worth the complexity at this scale.
+// worth the complexity at this scale. After reattach, orphan tags (rows in
+// the tags table no longer referenced by any resource) are pruned inside the
+// same transaction.
 func (s *Service) Update(ctx context.Context, id int64, in UpdateInput) (Resource, error) {
 	if err := validateUpdate(in); err != nil {
 		return Resource{}, err
@@ -162,7 +184,8 @@ func (s *Service) Update(ctx context.Context, id int64, in UpdateInput) (Resourc
 	}
 
 	var out Resource
-	err = withTx(ctx, s.db, func(q *store.Queries) error {
+	err = sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
 		row, err := q.UpdateResource(ctx, store.UpdateResourceParams{
 			Title:       strings.TrimSpace(in.Title),
 			Url:         strings.TrimSpace(in.URL),
@@ -179,13 +202,14 @@ func (s *Service) Update(ctx context.Context, id int64, in UpdateInput) (Resourc
 		if err := q.DetachAllTagsFromResource(ctx, id); err != nil {
 			return fmt.Errorf("detach tags: %w", err)
 		}
-		if err := attachTags(ctx, q, id, tags); err != nil {
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "resource",
+			OwnerID:      id,
+			Tags:         tags,
+			PruneOrphans: true,
+		}); err != nil {
 			return err
-		}
-		// Drop any tag rows that no longer reference any resource. Keeps the
-		// `tags` table tidy without scheduling a separate sweep.
-		if err := q.DeleteOrphanTags(ctx); err != nil {
-			return fmt.Errorf("prune orphan tags: %w", err)
 		}
 		out = Resource{Row: row, Tags: tags}
 		return nil
@@ -205,13 +229,22 @@ func (s *Service) Restore(ctx context.Context, id int64) error {
 
 // Purge permanently deletes a resource and (via FK cascades) its tag links.
 // Triggers fire DELETE on resources_fts so the search index stays in sync.
+// Orphan tags (rows in `tags` no longer referenced by any resource) are
+// pruned inside the same transaction.
 func (s *Service) Purge(ctx context.Context, id int64) error {
-	return withTx(ctx, s.db, func(q *store.Queries) error {
+	return sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
 		if err := q.PurgeResource(ctx, id); err != nil {
 			return fmt.Errorf("purge resource: %w", err)
 		}
-		if err := q.DeleteOrphanTags(ctx); err != nil {
-			return fmt.Errorf("prune orphan tags: %w", err)
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "resource",
+			OwnerID:      id,
+			Tags:         nil,
+			PruneOrphans: true,
+		}); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -281,38 +314,7 @@ func validateUpdate(in UpdateInput) error {
 	})
 }
 
-// attachTags upserts each tag and links it to resourceID. Tags must already
-// be normalized by domain.NormalizeTags.
-func attachTags(ctx context.Context, q *store.Queries, resourceID int64, tags []string) error {
-	for _, name := range tags {
-		tag, err := q.UpsertTag(ctx, name)
-		if err != nil {
-			return fmt.Errorf("upsert tag %q: %w", name, err)
-		}
-		if err := q.AttachTag(ctx, store.AttachTagParams{
-			ResourceID: resourceID,
-			TagID:      tag.ID,
-		}); err != nil {
-			return fmt.Errorf("attach tag %q: %w", name, err)
-		}
-	}
-	return nil
-}
-
-// withTx runs fn inside a transaction, committing on success and rolling
-// back (best-effort) on any error.
-func withTx(ctx context.Context, db *sql.DB, fn func(*store.Queries) error) error {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	q := store.New(db).WithTx(tx)
-	if err := fn(q); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
-}
+// withTx is now provided by internal/sqliteutil.WithTx.
 
 func nullableString(s string) sql.NullString {
 	if strings.TrimSpace(s) == "" {
