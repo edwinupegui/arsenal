@@ -99,6 +99,9 @@ func New(db *sql.DB, opts Options) *Server {
 // Addr returns the bind address (host:port) the server is configured for.
 func (s *Server) Addr() string { return s.addr }
 
+// Handler returns the underlying http.Handler for testing.
+func (s *Server) Handler() http.Handler { return s.srv.Handler }
+
 // Run starts the HTTP server and blocks until ctx is canceled. Auto-opens
 // the browser when opts.OpenURL is true.
 func (s *Server) Run(ctx context.Context, openURL bool, onReady func(addr string)) error {
