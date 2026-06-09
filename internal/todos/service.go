@@ -182,8 +182,25 @@ func (s *Service) Get(ctx context.Context, id int64) (*Todo, error) {
 	return &Todo{Row: row, Tags: tags}, nil
 }
 
-// List returns todos matching the filter.
+// List returns todos matching the filter. When Search is non-empty, it
+// delegates to FTS5 via SearchTodos.
 func (s *Service) List(ctx context.Context, f ListFilter) ([]*Todo, error) {
+	if f.Search != "" {
+		limit := int64(f.Limit)
+		if limit <= 0 {
+			limit = 50
+		}
+		rows, err := s.q.SearchTodos(ctx, f.Search, limit)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]*Todo, len(rows))
+		for i, lt := range rows {
+			out[i] = &Todo{Row: lt.Todo, Tags: lt.Tags}
+		}
+		return out, nil
+	}
+
 	var today string
 	if f.OnlyOverdue {
 		today = time.Now().UTC().Format("2006-01-02")

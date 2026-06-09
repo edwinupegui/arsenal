@@ -850,6 +850,143 @@ func TestList_Pagination(t *testing.T) {
 	}
 }
 
+func TestSearch_TitlePrefix(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "pagar luz"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "otra cosa"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Search: "pag"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.Title != "pagar luz" {
+		t.Errorf("title = %q, want %q", got[0].Row.Title, "pagar luz")
+	}
+}
+
+func TestSearch_Description(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "t", Description: "monthly invoice payment"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Search: "invoice"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+}
+
+func TestSearch_Notes(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "t", Notes: "rutina de mañana"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Search: "rutina"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+}
+
+func TestSearch_TagNames(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "t", Tags: []string{"urgente"}}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Search: "urgente"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+}
+
+func TestSearch_SpecialCharsNoCrash(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "luz"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// These should not crash
+	for _, q := range []string{"c++", "foo*bar", "(test)"} {
+		if _, err := svc.List(ctx, todos.ListFilter{Search: q}); err != nil {
+			t.Fatalf("List(%q): %v", q, err)
+		}
+	}
+}
+
+func TestSearch_ExcludesTrashed(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	trashed, err := svc.Create(ctx, todos.CreateInput{Title: "pagar luz"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.SoftDelete(ctx, trashed.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "pagar luz otro"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{Search: "pagar"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.Title != "pagar luz otro" {
+		t.Errorf("title = %q, want %q", got[0].Row.Title, "pagar luz otro")
+	}
+}
+
+func TestSearch_EmptyQuery(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+
+	q := store.New(db)
+	got, err := q.SearchTodos(ctx, "", 50)
+	if err != nil {
+		t.Fatalf("SearchTodos: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("len = %d, want 0", len(got))
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
