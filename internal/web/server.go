@@ -60,6 +60,9 @@ func New(db *sql.DB, opts Options) *Server {
 		http.Redirect(w, r, "/resources", http.StatusSeeOther)
 	})
 
+	// --- today ---
+	r.Get("/today", h.todayPage)
+
 	// --- resources ---
 	r.Get("/resources", h.listResources)
 	r.Get("/resources/new", h.newResourceForm)

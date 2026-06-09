@@ -38,10 +38,19 @@ func (h *Handlers) listTodos(w http.ResponseWriter, r *http.Request) {
 		Priority:     todos.Priority(q.Get("priority")),
 		CategorySlug: q.Get("cat"),
 		TagName:      q.Get("tag"),
-		OnlyOverdue:  q.Get("overdue") == "1",
+		OnlyOverdue:  q.Get("overdue") == "1" || q.Get("overdue") == "true",
 		DueBefore:    q.Get("due_before"),
 		Trashed:      q.Get("trashed") == "1",
 		Limit:        50,
+	}
+
+	// Support due=today and due=upcoming shortcuts from the Today view.
+	now := time.Now().UTC()
+	switch q.Get("due") {
+	case "today":
+		filter.DueBefore = now.AddDate(0, 0, 1).Format("2006-01-02")
+	case "upcoming":
+		filter.DueBefore = now.AddDate(0, 0, 7).Format("2006-01-02")
 	}
 	if offset, err := strconv.Atoi(q.Get("offset")); err == nil && offset > 0 {
 		filter.Offset = offset
