@@ -25,7 +25,11 @@ func (q *Queries) AttachTag(ctx context.Context, arg AttachTagParams) error {
 
 const deleteOrphanTags = `-- name: DeleteOrphanTags :exec
 DELETE FROM tags
-WHERE id NOT IN (SELECT DISTINCT tag_id FROM resource_tags)
+WHERE id NOT IN (
+    SELECT DISTINCT tag_id FROM resource_tags
+    UNION
+    SELECT DISTINCT tag_id FROM todo_tags
+)
 `
 
 func (q *Queries) DeleteOrphanTags(ctx context.Context) error {

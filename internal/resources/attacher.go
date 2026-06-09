@@ -43,9 +43,8 @@ func (a *Attacher) AttachTagToOwner(ctx context.Context, tagID, ownerID int64) e
 }
 
 // DeleteOrphanTags removes tag rows that no resource_tags row references.
-// In v3 this is a no-op for todo/finance/calendar owners; the existing SQL
-// only checks resource_tags. The todos migration is deferred to phase 2, so
-// the gap is not activable in phase 1.5.
+// Covers resource_tags and todo_tags; extend the UNION when new tag-attachable
+// domains are added in phase 3+.
 func (a *Attacher) DeleteOrphanTags(ctx context.Context) error {
 	return a.q.DeleteOrphanTags(ctx)
 }
