@@ -23,7 +23,7 @@ Chain strategy: pending user decision
 
 ## Work Unit A — Core package: Provider + Registry + Service
 
-- [ ] A1. Define `Provider`, `Section`, `Item` types
+- [x] A1. Define `Provider`, `Section`, `Item` types
   Create `internal/today/provider.go` with the `Provider` interface (`Name() string`, `Sections(ctx) ([]Section, error)`). Create `internal/today/sections.go` with `Section` struct (Key, Title, Items, ShowAllURL, IsEmpty), `Item` struct (Domain, ID, Title, Subtitle, Priority, Tags, URL), and the `sectionOrder` map (`overdue=1`, `due-today=2`, `upcoming=3`, `recent=4`).
   - Files: `internal/today/provider.go` (NEW), `internal/today/sections.go` (NEW)
   - Depends: —
@@ -31,7 +31,7 @@ Chain strategy: pending user decision
   - Tests: None (type definitions only)
   - Specs: REQ-TV-01 (Provider interface), REQ-TV-07 (Item shape), REQ-TV-03 (section order map)
 
-- [ ] A2. Define `Registry` with Register + Collect
+- [x] A2. Define `Registry` with Register + Collect
   Add `Registry` struct to `internal/today/provider.go` with `NewRegistry()`, `Register(p Provider)`, and `Collect(ctx) ([]Section, []ProviderError)`. `Collect` iterates providers, calls `Sections(ctx)`, and aggregates results. On provider error, records `ProviderError{Name, Err}` and continues to next provider.
   - Files: `internal/today/provider.go` (MOD)
   - Depends: A1
@@ -39,7 +39,7 @@ Chain strategy: pending user decision
   - Tests: None (covered by A3 RED)
   - Specs: REQ-TV-02 (Registry aggregation), REQ-TV-06 (provider error degradation)
 
-- [ ] A3. RED: registry aggregation + ordering + density cap + empty state tests
+- [x] A3. RED: registry aggregation + ordering + density cap + empty state tests
   Create `internal/today/service_test.go` with table-driven tests: `TestRegistry_CollectsFromTwoProviders`, `TestRegistry_SectionOrderingFixed`, `TestService_DensityTruncatesAt5`, `TestService_NoTruncationBelowDensity`, `TestService_EmptySectionsOmitted`, `TestService_ProviderErrorDegradesGracefully`, `TestService_ShowAllURLSetOnOverflow`. Use a mock `Provider` that returns configurable sections/errors.
   - Files: `internal/today/service_test.go` (NEW)
   - Depends: A1, A2
@@ -47,7 +47,7 @@ Chain strategy: pending user decision
   - Tests: `TestRegistry_CollectsFromTwoProviders`, `TestRegistry_SectionOrderingFixed`, `TestService_DensityTruncatesAt5`, `TestService_NoTruncationBelowDensity`, `TestService_EmptySectionsOmitted`, `TestService_ProviderErrorDegradesGracefully`, `TestService_ShowAllURLSetOnOverflow`
   - Specs: REQ-TV-02, REQ-TV-03, REQ-TV-04, REQ-TV-06; Scenarios: Registry collects from two providers, Section ordering is fixed, Density truncates at 5, No truncation when at or below density, Provider error degrades gracefully, Empty sections are omitted
 
-- [ ] A4. GREEN: implement Service.Build
+- [x] A4. GREEN: implement Service.Build
   Create `internal/today/today.go` with `Service` struct (db, registry), `New(db)`, and `Build(ctx) ([]Section, []ProviderError)`. `Build` calls `registry.Collect`, sorts sections by `sectionOrder`, truncates each to 5 items, sets `ShowAllURL` for overflow sections, and omits empty sections.
   - Files: `internal/today/today.go` (NEW)
   - Depends: A3
@@ -55,7 +55,7 @@ Chain strategy: pending user decision
   - Tests: A3 tests now pass
   - Specs: REQ-TV-02, REQ-TV-03, REQ-TV-04, REQ-TV-05, REQ-TV-06
 
-- [ ] A5. Wire default providers + ShowAllURL mapping
+- [x] A5. Wire default providers + ShowAllURL mapping
   Wire `New(db)` to register `TodosProvider` and `ResourcesProvider` by default (v3.0 standard set). Add `ShowAllURL` generation logic: Overdue → `/todos?status=open&overdue=true`, Due Today → `/todos?status=open&due=today`, Upcoming → `/todos?status=open&due=upcoming`, Recent → `/resources`.
   - Files: `internal/today/today.go` (MOD)
   - Depends: A4
@@ -63,7 +63,7 @@ Chain strategy: pending user decision
   - Tests: Existing A3 tests still pass; add `TestService_ShowAllURLMapping` if not covered
   - Specs: REQ-TV-04 (show-all links), REQ-TW-03 (URL mapping)
 
-- [ ] A6. RED+GREEN: empty state renderer
+- [x] A6. RED+GREEN: empty state renderer
   Create `internal/today/empty.go` with `IsEmptyPage(sections []Section) bool` and `RenderEmptyState(surface string) string` (returns TUI or web empty message). RED: write tests first. GREEN: implement.
   - Files: `internal/today/empty.go` (NEW), `internal/today/empty_test.go` (NEW)
   - Depends: A4
@@ -75,7 +75,7 @@ Chain strategy: pending user decision
 
 ## Work Unit B — Concrete providers (TodosProvider + ResourcesProvider)
 
-- [ ] B1. RED: TodosProvider tests with real test DB
+- [x] B1. RED: TodosProvider tests with real test DB
   Create `internal/today/providers/todos_test.go` with `newTestDB(t)` pattern. Seed known todos with varying due dates and statuses. Assert section construction for overdue, due-today, upcoming. Verify done/deleted exclusion and item URL mapping.
   - Files: `internal/today/providers/todos_test.go` (NEW)
   - Depends: A4
@@ -83,7 +83,7 @@ Chain strategy: pending user decision
   - Tests: `TestTodosProvider_OverdueSection`, `TestTodosProvider_DueTodaySection`, `TestTodosProvider_UpcomingSection`, `TestTodosProvider_OmitsEmptySections`, `TestTodosProvider_ExcludesDoneAndDeleted`, `TestTodosProvider_ItemMappingIncludesURL`
   - Specs: REQ-TP-01, REQ-TP-02, REQ-TP-03, REQ-TP-04, REQ-TP-06; Scenarios: TodosProvider returns overdue/due-today/upcoming sections, omits empty, excludes done/deleted, item mapping
 
-- [ ] B2. GREEN: implement TodosProvider
+- [x] B2. GREEN: implement TodosProvider
   Create `internal/today/providers/todos.go` with `TodosProvider` struct (db, queries). Implement `Name() "todos"` and `Sections(ctx)`. Use `ListTodosDueBefore(today)` for overdue, `ListTodosDueBetween(today, today)` for due-today, `ListTodosDueBetween(tomorrow, today+7d)` for upcoming. Map rows to `Item` with `Domain="todos"`, `URL="/todos/{id}"`.
   - Files: `internal/today/providers/todos.go` (NEW)
   - Depends: B1
@@ -91,7 +91,7 @@ Chain strategy: pending user decision
   - Tests: B1 tests now pass
   - Specs: REQ-TP-01, REQ-TP-02, REQ-TP-03, REQ-TP-04, REQ-TP-06
 
-- [ ] B3. RED: ResourcesProvider tests
+- [x] B3. RED: ResourcesProvider tests
   Create `internal/today/providers/resources_test.go`. Seed 8 resources, assert only 5 most recent returned. Verify empty DB returns no section. Verify item mapping with `Domain="resources"`.
   - Files: `internal/today/providers/resources_test.go` (NEW)
   - Depends: A4
@@ -99,7 +99,7 @@ Chain strategy: pending user decision
   - Tests: `TestResourcesProvider_RecentSection`, `TestResourcesProvider_OmitsSectionWhenNoResources`, `TestResourcesProvider_Limit5`, `TestResourcesProvider_ItemMapping`
   - Specs: REQ-TP-05, REQ-TP-06; Scenarios: ResourcesProvider returns recent section, omits when no resources
 
-- [ ] B4. GREEN: implement ResourcesProvider
+- [x] B4. GREEN: implement ResourcesProvider
   Create `internal/today/providers/resources.go` with `ResourcesProvider` struct. Implement `Name() "resources"` and `Sections(ctx)`. Use `ListResourcesFiltered({Limit: 5})`. Map to `Item` with `Domain="resources"`, `Subtitle=resource.Type`, `Priority=""`, `URL="/resources/{id}"`.
   - Files: `internal/today/providers/resources.go` (NEW)
   - Depends: B3
@@ -107,7 +107,7 @@ Chain strategy: pending user decision
   - Tests: B3 tests now pass
   - Specs: REQ-TP-05, REQ-TP-06
 
-- [ ] B5. Integration: full Build returns expected ordered sections
+- [x] B5. Integration: full Build returns expected ordered sections
   Add `internal/today/integration_test.go` with `TestService_Build_Integration` using a real test DB. Seed 3 overdue, 2 due-today, 4 upcoming todos + 8 resources. Call `Service.Build(ctx)`. Assert 4 sections in order, each truncated to 5, with correct `ShowAllURL`.
   - Files: `internal/today/integration_test.go` (NEW)
   - Depends: B2, B4
@@ -115,7 +115,7 @@ Chain strategy: pending user decision
   - Tests: `TestService_Build_Integration`
   - Specs: REQ-TV-02, REQ-TV-03, REQ-TV-04; Scenarios: Registry collects from two providers, Section ordering is fixed, Density truncates at 5
 
-- [ ] B6. Provider error degradation: mock provider returns error
+- [x] B6. Provider error degradation: mock provider returns error
   Add `TestRegistry_ProviderErrorSkipped` in `service_test.go`. Register a mock provider that returns an error. Call `Collect(ctx)`. Assert the error is captured in `[]ProviderError`, the other provider's sections still render, and no panic occurs.
   - Files: `internal/today/service_test.go` (MOD)
   - Depends: A4
@@ -127,7 +127,7 @@ Chain strategy: pending user decision
 
 ## Work Unit C — TUI sub-area + default-landing change
 
-- [ ] C1. RED: app_test for areaToday dispatching + r key reload
+- [x] C1. RED: app_test for areaToday dispatching + r key reload
   Create `internal/tui/today_test.go` with tests for areaToday dispatching to updateToday, `r` key triggering reload, and `n` key opening new-todo form. Use direct `App.Update()` calls with mock key events.
   - Files: `internal/tui/today_test.go` (NEW)
   - Depends: A5
@@ -135,7 +135,7 @@ Chain strategy: pending user decision
   - Tests: `TestApp_AreaToday_DispatchesToUpdateToday`, `TestApp_AreaToday_RKeyTriggersReload`, `TestApp_AreaToday_NKeyOpensNewTodo`
   - Specs: REQ-TT-01 (wire areaToday), REQ-TT-02 (r key refresh), REQ-TT-03 (n key new todo); Scenarios: Today area renders real data, r key refreshes, n key opens new-todo form
 
-- [ ] C2. GREEN: implement updateToday + viewToday
+- [x] C2. GREEN: implement updateToday + viewToday
   Create `internal/tui/today.go` with `updateToday(msg tea.Msg)` and `viewToday() string`. `updateToday` handles `todayReloadedMsg` (updates model sections) and triggers `reloadTodayCmd` on init. `viewToday` renders sections with headers, items, density, and empty state (via `today.RenderEmptyState("tui")`).
   - Files: `internal/tui/today.go` (NEW)
   - Depends: C1
@@ -143,7 +143,7 @@ Chain strategy: pending user decision
   - Tests: C1 tests now pass
   - Specs: REQ-TT-01, REQ-TT-02, REQ-TT-03
 
-- [ ] C3. RED: status bar shows "Today" + key hints in areaToday
+- [x] C3. RED: status bar shows "Today" + key hints in areaToday
   Add `TestApp_StatusBar_TodayHints` in `today_test.go`. Assert status bar renders "Today" with hints: `r` refresh, `n` new todo, `Tab`/`Shift+Tab` switch, `1-5` jump.
   - Files: `internal/tui/today_test.go` (MOD)
   - Depends: C2
@@ -151,7 +151,7 @@ Chain strategy: pending user decision
   - Tests: `TestApp_StatusBar_TodayHints`
   - Specs: REQ-TT-04; Scenario: Status bar shows Today hints
 
-- [ ] C4. GREEN: status bar update
+- [x] C4. GREEN: status bar update
   Modify `internal/tui/app.go` (or `status.go`) to render context-aware hints when `currentArea == areaToday`. Replace placeholder hints with Today-specific hints.
   - Files: `internal/tui/app.go` (MOD)
   - Depends: C3
@@ -159,7 +159,7 @@ Chain strategy: pending user decision
   - Tests: C3 test now passes
   - Specs: REQ-TT-04
 
-- [ ] C5. Default landing change: KeyLandingSurface config lookup
+- [x] C5. Default landing change: KeyLandingSurface config lookup
   Modify `internal/tui/app.go` `New()` to read `KeyLandingSurface` from config. If value is `"today"` or missing, set `currentArea = areaToday`. If `"resources"`, set `currentArea = areaResources`. If invalid, fall back to `areaToday`. Modify `internal/config/keys.go` to expand `EnumValues` from `["tui", "web"]` to `["today", "resources"]`.
   - Files: `internal/tui/app.go` (MOD), `internal/config/keys.go` (MOD)
   - Depends: C2
@@ -167,7 +167,7 @@ Chain strategy: pending user decision
   - Tests: `TestApp_DefaultLanding_Today`, `TestApp_LandingSurface_Resources`, `TestApp_LandingSurface_InvalidFallback`
   - Specs: REQ-TT-05 (default landing), REQ-TT-06 (config override); Scenarios: Default landing is Today, KeyLandingSurface=resources overrides, Invalid falls back
 
-- [ ] C6. Regression: Resources area still works
+- [x] C6. Regression: Resources area still works
   Run existing TUI tests (`go test ./internal/tui/...`). Manual smoke: launch TUI, verify Resources area still renders list, detail, search, trash toggle, star/unstar. Verify Tab/Shift+Tab cycle still works.
   - Files: — (verification only)
   - Depends: C2, C5

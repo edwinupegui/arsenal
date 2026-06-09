@@ -129,19 +129,19 @@ func TestGetDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDefault unset: %v", err)
 	}
-	if got != "tui" {
-		t.Errorf("GetDefault unset = %q, want tui", got)
+	if got != "today" {
+		t.Errorf("GetDefault unset = %q, want today", got)
 	}
 	// Set: should return the stored value.
-	if err := s.Set(ctx, config.KeyLandingSurface, "web"); err != nil {
+	if err := s.Set(ctx, config.KeyLandingSurface, "resources"); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
 	got, err = s.GetDefault(ctx, config.KeyLandingSurface)
 	if err != nil {
 		t.Fatalf("GetDefault set: %v", err)
 	}
-	if got != "web" {
-		t.Errorf("GetDefault set = %q, want web", got)
+	if got != "resources" {
+		t.Errorf("GetDefault set = %q, want resources", got)
 	}
 }
 
@@ -186,7 +186,7 @@ func TestAll(t *testing.T) {
 	ctx := context.Background()
 	s := newTestDB(t)
 	_ = s.Set(ctx, config.KeyCurrency, "USD")
-	_ = s.Set(ctx, config.KeyLandingSurface, "web")
+	_ = s.Set(ctx, config.KeyLandingSurface, "resources")
 	all, err := s.All(ctx)
 	if err != nil {
 		t.Fatalf("All: %v", err)
@@ -194,7 +194,7 @@ func TestAll(t *testing.T) {
 	if all[config.KeyCurrency] != "USD" {
 		t.Errorf("all[KeyCurrency] = %q, want USD", all[config.KeyCurrency])
 	}
-	if all[config.KeyLandingSurface] != "web" {
-		t.Errorf("all[KeyLandingSurface] = %q, want web", all[config.KeyLandingSurface])
+	if all[config.KeyLandingSurface] != "resources" {
+		t.Errorf("all[KeyLandingSurface] = %q, want resources", all[config.KeyLandingSurface])
 	}
 }
