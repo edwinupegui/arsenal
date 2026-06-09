@@ -14,20 +14,23 @@ import (
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
 // Handlers holds the shared dependencies every HTTP handler reaches for.
 type Handlers struct {
-	db      *sql.DB
-	queries *store.Queries
-	service *resources.Service
+	db          *sql.DB
+	queries     *store.Queries
+	service     *resources.Service
+	todoService *todos.Service
 }
 
 func newHandlers(db *sql.DB) *Handlers {
 	return &Handlers{
-		db:      db,
-		queries: store.New(db),
-		service: resources.New(db),
+		db:          db,
+		queries:     store.New(db),
+		service:     resources.New(db),
+		todoService: todos.New(db),
 	}
 }
 
@@ -40,6 +43,12 @@ func (h *Handlers) commonPage(r *http.Request, title, nav string) pageData {
 	}
 	if trashed, err := countTrashed(r.Context(), h.db); err == nil {
 		pd.Counts.Trashed = trashed
+	}
+	if open, err := h.queries.CountOpenTodos(r.Context()); err == nil {
+		pd.TodoCounts.Open = open
+	}
+	if overdue, err := countOverdueTodos(r.Context(), h.db); err == nil {
+		pd.TodoCounts.Overdue = overdue
 	}
 	pd.Sidebar = h.buildSidebar(r)
 	return pd
@@ -601,6 +610,14 @@ func countTrashed(ctx context.Context, db *sql.DB) (int64, error) {
 	var n int64
 	err := db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM resources WHERE deleted_at IS NOT NULL`,
+	).Scan(&n)
+	return n, err
+}
+
+func countOverdueTodos(ctx context.Context, db *sql.DB) (int64, error) {
+	var n int64
+	err := db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM todos WHERE status = 'open' AND deleted_at IS NULL AND due_date < date('now')`,
 	).Scan(&n)
 	return n, err
 }

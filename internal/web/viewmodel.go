@@ -29,6 +29,64 @@ type resourceVM struct {
 	Trashed      bool
 }
 
+// todoVM is the flat view-model for todos. Mirrors resourceVM pattern.
+type todoVM struct {
+	ID           int64
+	Title        string
+	Description  string
+	Priority     string
+	Status       string
+	DueDate      string
+	Overdue      bool
+	CategorySlug string
+	CategoryName string
+	Tags         []string
+	Notes        string
+	Recurrence   string
+	DoneAt       string
+	CreatedAt    string
+	UpdatedAt    string
+	DeletedAt    string
+	Trashed      bool
+}
+
+func toTodoVM(t store.Todo, tags []string, catName, catSlug string) todoVM {
+	vm := todoVM{
+		ID:         t.ID,
+		Title:      t.Title,
+		Priority:   t.Priority,
+		Status:     t.Status,
+		Tags:       append([]string(nil), tags...),
+		Notes:      nullStrPtr(t.Notes),
+		Recurrence: t.Recurrence,
+		CreatedAt:  t.CreatedAt,
+		UpdatedAt:  t.UpdatedAt,
+	}
+	if t.Description != nil {
+		vm.Description = *t.Description
+	}
+	if t.DueDate != nil {
+		vm.DueDate = *t.DueDate
+	}
+	if t.DoneAt != nil {
+		vm.DoneAt = *t.DoneAt
+	}
+	if t.DeletedAt != nil {
+		vm.DeletedAt = *t.DeletedAt
+		vm.Trashed = true
+	}
+	vm.CategoryName = catName
+	vm.CategorySlug = catSlug
+	return vm
+}
+
+func nullStrPtr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func toVM(lr store.ListedResource) resourceVM {
 	vm := resourceVM{
 		ID:        lr.Resource.ID,
@@ -132,15 +190,22 @@ type counts struct {
 	Trashed int64
 }
 
+// todoCounts tracks todo-specific counters for the sidebar.
+type todoCounts struct {
+	Open    int64
+	Overdue int64
+}
+
 // pageData is the shared envelope every render call passes to the layout.
 type pageData struct {
-	Title   string
-	Nav     string
-	Query   string
-	Flash   flash
-	Counts  counts
-	Sidebar sidebarVM
-	Aside   *asideVM // nil => don't render the right column
+	Title      string
+	Nav        string
+	Query      string
+	Flash      flash
+	Counts     counts
+	TodoCounts todoCounts
+	Sidebar    sidebarVM
+	Aside      *asideVM // nil => don't render the right column
 }
 
 // sidebarLinkVM is one navigable entry in the persistent left sidebar.

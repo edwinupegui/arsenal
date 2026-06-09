@@ -78,6 +78,9 @@ func New(db *sql.DB, opts Options) *Server {
 	r.Get("/search", h.searchResources)
 	r.Get("/trash", h.trashList)
 
+	// --- todos ---
+	h.todoRoutes(r)
+
 	// --- categories / tags ---
 	r.Get("/categories", h.listCategories)
 	r.Get("/tags", h.listTags)
