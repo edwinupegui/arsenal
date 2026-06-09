@@ -287,7 +287,9 @@ func (h *Handlers) softDeleteTodo(w http.ResponseWriter, r *http.Request) {
 	}
 	if isHTMX(r) {
 		w.Header().Set("Content-Type", "text/html")
-		_, _ = w.Write([]byte(""))
+		pd := h.commonPage(r, "Todos", "todos")
+		t := pages["todos"]
+		_ = t.ExecuteTemplate(w, "sidebar-oob", pd)
 		return
 	}
 	http.Redirect(w, r, "/todos", http.StatusSeeOther)
@@ -346,6 +348,8 @@ func (h *Handlers) renderTodoCard(w http.ResponseWriter, r *http.Request, id int
 	w.Header().Set("Content-Type", "text/html")
 	t := pages["todos"]
 	_ = t.ExecuteTemplate(w, "todo-card", vm)
+	pd := h.commonPage(r, "Todos", "todos")
+	_ = t.ExecuteTemplate(w, "sidebar-oob", pd)
 }
 
 func (h *Handlers) renderTodoForm(w http.ResponseWriter, r *http.Request, form todoFormVM,
