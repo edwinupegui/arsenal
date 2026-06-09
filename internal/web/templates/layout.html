@@ -168,6 +168,7 @@
         if (!form.hasAttribute('data-confirm')) return;
         if (form.dataset.confirmed === 'true') return;
         e.preventDefault();
+        e.stopPropagation();
         open(form);
       }, true);
 
