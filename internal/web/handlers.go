@@ -14,23 +14,30 @@ import (
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/today"
+	"github.com/edwinupegui/arsenal/internal/today/providers"
 	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
 // Handlers holds the shared dependencies every HTTP handler reaches for.
 type Handlers struct {
-	db          *sql.DB
-	queries     *store.Queries
-	service     *resources.Service
-	todoService *todos.Service
+	db           *sql.DB
+	queries      *store.Queries
+	service      *resources.Service
+	todoService  *todos.Service
+	todayService *today.Service
 }
 
 func newHandlers(db *sql.DB) *Handlers {
+	todaySvc := today.New(db)
+	todaySvc.Register(providers.NewTodosProvider(db))
+	todaySvc.Register(providers.NewResourcesProvider(db))
 	return &Handlers{
-		db:          db,
-		queries:     store.New(db),
-		service:     resources.New(db),
-		todoService: todos.New(db),
+		db:           db,
+		queries:      store.New(db),
+		service:      resources.New(db),
+		todoService:  todos.New(db),
+		todayService: todaySvc,
 	}
 }
 

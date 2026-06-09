@@ -1,0 +1,63 @@
+{{define "content"}}
+<div class="toolbar">
+  <h1>Today</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/todos/new">+ Add todo</a>
+</div>
+
+{{if not .Sections}}
+  <div class="empty">
+    {{if .EmptyMessage}}{{.EmptyMessage}}{{else}}
+    <h2>Nothing on your plate today</h2>
+    <p>Start by adding a todo or browsing resources.</p>
+    <a class="btn btn-primary" href="/todos/new">+ Add todo</a>
+    <a class="btn" href="/resources">Browse resources</a>
+    {{end}}
+  </div>
+{{else}}
+  {{range .Sections}}
+  <section class="today-section" id="section-{{.Key}}">
+    <header class="today-section-header">
+      <h2>{{.Title}}</h2>
+      {{if .ShowAllURL}}
+        <a href="{{.ShowAllURL}}" class="btn">show all →</a>
+      {{end}}
+    </header>
+    <div class="grid">
+      {{range .Items}}
+        {{template "today-item" .}}
+      {{end}}
+    </div>
+  </section>
+  {{end}}
+{{end}}
+{{end}}
+
+{{define "today-item"}}
+<article class="card" id="today-item-{{.ID}}">
+  <div class="title-row">
+    <a href="{{.URL}}">{{.Title}}</a>
+    {{if .Priority}}<span class="badge priority">{{.Priority}}</span>{{end}}
+  </div>
+
+  {{if .Subtitle}}<p class="description">{{.Subtitle}}</p>{{end}}
+
+  {{if .Tags}}
+  <div class="meta">
+    {{range .Tags}}<a class="tag" href="/todos?tag={{.}}">{{.}}</a>{{end}}
+  </div>
+  {{end}}
+
+  {{if eq .Domain "todos"}}
+  <div class="footer">
+    <form method="post" action="/todos/{{.ID}}/done"
+          hx-post="/todos/{{.ID}}/done"
+          hx-target="#today-item-{{.ID}}"
+          hx-swap="outerHTML"
+          style="display:inline">
+      <button class="btn btn-primary">Done</button>
+    </form>
+  </div>
+  {{end}}
+</article>
+{{end}}
