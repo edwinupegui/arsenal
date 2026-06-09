@@ -1,19 +1,263 @@
+{{define "todo-card"}}
+<article class="card" id="card-{{.ID}}">
+  <div class="title-row">
+    <a href="/todos/{{.ID}}">{{.Title}}</a>
+    {{if .Overdue}}<span class="badge danger">overdue</span>{{end}}
+    <span class="badge priority">{{.Priority}}</span>
+  </div>
+
+  {{if .Description}}<p class="description">{{.Description}}</p>{{end}}
+
+  <div class="meta">
+    <span class="badge status {{.Status}}">{{.Status}}</span>
+    {{if .DueDate}}<span class="badge due">{{.DueDate}}</span>{{end}}
+    {{if .CategorySlug}}<span class="badge"><a href="/todos?cat={{.CategorySlug}}">{{.CategorySlug}}</a></span>{{end}}
+    {{range .Tags}}<a class="tag" href="/todos?tag={{.}}">{{.}}</a>{{end}}
+    {{if ne .Recurrence "none"}}<span class="badge recurrence">{{.Recurrence}}</span>{{end}}
+  </div>
+
+  <div class="footer">
+    {{if eq .Status "done"}}
+      <form method="post" action="/todos/{{.ID}}/open"
+            hx-post="/todos/{{.ID}}/open"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            style="display:inline">
+        <button class="btn">Open</button>
+      </form>
+    {{else}}
+      <form method="post" action="/todos/{{.ID}}/done"
+            hx-post="/todos/{{.ID}}/done"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            style="display:inline">
+        <button class="btn btn-primary">Done</button>
+      </form>
+    {{end}}
+    <a href="/todos/{{.ID}}/edit">edit</a>
+    {{if .Trashed}}
+      <form method="post" action="/todos/{{.ID}}/restore"
+            hx-post="/todos/{{.ID}}/restore"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            style="display:inline">
+        <button class="btn">restore</button>
+      </form>
+      <form method="post" action="/todos/{{.ID}}/purge"
+            hx-post="/todos/{{.ID}}/purge"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            data-confirm="This will permanently delete the todo. This cannot be undone."
+            data-confirm-title="Delete forever?"
+            data-confirm-label="Delete forever"
+            style="display:inline">
+        <button class="btn btn-danger">purge</button>
+      </form>
+    {{else}}
+      <form method="post" action="/todos/{{.ID}}/delete"
+            hx-post="/todos/{{.ID}}/delete"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            data-confirm="The todo will move to trash. You can restore it later."
+            data-confirm-title="Move to trash?"
+            data-confirm-label="Move to trash"
+            style="display:inline">
+        <button class="btn btn-danger">delete</button>
+      </form>
+    {{end}}
+    <span class="id">#{{.ID}}</span>
+  </div>
+</article>
+{{end}}
+
 {{define "todos-list"}}
-<div>todo list placeholder</div>
+<div class="toolbar">
+  <h1>{{.Title}}</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/todos/new">+ Add todo</a>
+</div>
+
+{{if .Filter.Active}}
+<div class="toolbar">
+  <span class="tag">Filter:</span>
+  {{if .Filter.Status}}<span class="badge">status:{{.Filter.Status}}</span>{{end}}
+  {{if .Filter.Priority}}<span class="badge">priority:{{.Filter.Priority}}</span>{{end}}
+  {{if .Filter.Overdue}}<span class="badge">overdue</span>{{end}}
+  {{if .Filter.Cat}}<span class="badge">cat:{{.Filter.Cat}}</span>{{end}}
+  {{if .Filter.Tag}}<span class="badge">tag:{{.Filter.Tag}}</span>{{end}}
+  {{if .Filter.Trashed}}<span class="badge">trashed</span>{{end}}
+  {{if .Filter.DueBefore}}<span class="badge">due before:{{.Filter.DueBefore}}</span>{{end}}
+  <a href="/todos" class="btn">clear</a>
+</div>
+{{end}}
+
+{{if not .Todos}}
+  <div class="empty">
+    <h2>No todos yet</h2>
+    <p>Start building your todo list.</p>
+    <a class="btn btn-primary" href="/todos/new">+ Add todo</a>
+  </div>
+{{else}}
+<div class="grid">
+  {{range .Todos}}
+    {{template "todo-card" .}}
+  {{end}}
+</div>
+{{end}}
 {{end}}
 
 {{define "todo-detail"}}
-<div>todo detail placeholder</div>
+<div class="toolbar">
+  <a class="btn" href="/todos">&larr; Back</a>
+  <span class="spacer"></span>
+  <a class="btn" href="/todos/{{.Todo.ID}}/edit">Edit</a>
+  {{if .Todo.Trashed}}
+    <form method="post" action="/todos/{{.Todo.ID}}/restore" style="display:inline">
+      <button class="btn">Restore</button>
+    </form>
+    <form method="post" action="/todos/{{.Todo.ID}}/purge"
+          data-confirm="This will permanently delete the todo. This cannot be undone."
+          data-confirm-title="Delete forever?"
+          data-confirm-label="Delete forever"
+          style="display:inline">
+      <button class="btn btn-danger">Delete forever</button>
+    </form>
+  {{else}}
+    {{if eq .Todo.Status "done"}}
+      <form method="post" action="/todos/{{.Todo.ID}}/open" style="display:inline">
+        <button class="btn">Open</button>
+      </form>
+    {{else}}
+      <form method="post" action="/todos/{{.Todo.ID}}/done" style="display:inline">
+        <button class="btn btn-primary">Done</button>
+      </form>
+    {{end}}
+    <form method="post" action="/todos/{{.Todo.ID}}/delete"
+          data-confirm="The todo will move to trash. You can restore it later."
+          data-confirm-title="Move to trash?"
+          data-confirm-label="Move to trash"
+          style="display:inline">
+      <button class="btn btn-danger">Move to trash</button>
+    </form>
+  {{end}}
+</div>
+
+<article class="detail">
+  <h1>{{.Todo.Title}}</h1>
+  <dl>
+    <dt>Status</dt><dd><span class="badge status {{.Todo.Status}}">{{.Todo.Status}}</span></dd>
+    <dt>Priority</dt><dd><span class="badge priority">{{.Todo.Priority}}</span></dd>
+    {{if .Todo.DueDate}}<dt>Due</dt><dd>{{.Todo.DueDate}}</dd>{{end}}
+    {{if .Todo.Overdue}}<dd><span class="badge danger">overdue</span></dd>{{end}}
+    <dt>Category</dt><dd>
+      {{if .Todo.CategorySlug}}
+        <a href="/todos?cat={{.Todo.CategorySlug}}">{{.Todo.CategoryName}}</a>
+      {{else}}&mdash;{{end}}
+    </dd>
+    <dt>Tags</dt><dd>
+      {{if .Todo.Tags}}
+        {{range .Todo.Tags}}<a class="tag" href="/todos?tag={{.}}">{{.}}</a> {{end}}
+      {{else}}&mdash;{{end}}
+    </dd>
+    <dt>Recurrence</dt><dd>{{.Todo.Recurrence}}</dd>
+    <dt>Created</dt><dd>{{.Todo.CreatedAt}}</dd>
+    <dt>Updated</dt><dd>{{.Todo.UpdatedAt}}</dd>
+    {{if .Todo.DoneAt}}<dt>Done</dt><dd>{{.Todo.DoneAt}}</dd>{{end}}
+    {{if .Todo.Trashed}}<dt>Trashed</dt><dd>{{.Todo.DeletedAt}}</dd>{{end}}
+  </dl>
+
+  {{if .Todo.Description}}
+    <h2>Description</h2>
+    <div class="body">{{.Todo.Description}}</div>
+  {{end}}
+  {{if .Todo.Notes}}
+    <h2>Notes</h2>
+    <div class="body">{{.Todo.Notes}}</div>
+  {{end}}
+</article>
 {{end}}
 
 {{define "todo-form"}}
-<div>todo form placeholder</div>
-{{end}}
+<div class="toolbar">
+  <a class="btn" href="{{.CancelURL}}">&larr; Cancel</a>
+  <span class="spacer"></span>
+</div>
 
-{{define "todo-card"}}
-<div>todo card placeholder</div>
+<article class="detail">
+  <h1>{{.Title}}</h1>
+  {{if .FormError}}<div class="flash flash-danger">{{.FormError}}</div>{{end}}
+
+  <form class="resource-form" method="post" action="{{.Action}}">
+    <fieldset>
+      <label for="title">Title</label>
+      <input id="title" name="title" required value="{{.Form.Title}}">
+    </fieldset>
+
+    <fieldset>
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3">{{.Form.Description}}</textarea>
+    </fieldset>
+
+    <fieldset class="row">
+      <div>
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority">
+          {{range .Priorities}}
+            <option value="{{.}}" {{if eq . $.Form.Priority}}selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label for="due_date">Due date</label>
+        <input id="due_date" name="due_date" type="date" value="{{.Form.DueDate}}">
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">&mdash; uncategorized &mdash;</option>
+          {{range .Categories}}
+            <option value="{{.Slug}}" {{if eq .Slug $.Form.Category}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        </select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label for="recurrence">Recurrence</label>
+      <select id="recurrence" name="recurrence">
+        {{range .Recurrences}}
+          <option value="{{.}}" {{if eq . $.Form.Recurrence}}selected{{end}}>{{.}}</option>
+        {{end}}
+      </select>
+      <small>Auto-expansion: v3.x</small>
+    </fieldset>
+
+    <fieldset>
+      <label for="tags">Tags (comma separated)</label>
+      <input id="tags" name="tags" value="{{.Form.Tags}}" placeholder="work, urgent, home">
+    </fieldset>
+
+    <fieldset>
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="4">{{.Form.Notes}}</textarea>
+    </fieldset>
+
+    <div class="actions">
+      <a class="btn" href="{{.CancelURL}}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{{.SubmitLabel}}</button>
+    </div>
+  </form>
+</article>
 {{end}}
 
 {{define "content"}}
-<div>todo page placeholder</div>
+{{if eq .Kind "new"}}
+  {{template "todo-form" .}}
+{{else if eq .Kind "edit"}}
+  {{template "todo-form" .}}
+{{else if .Todo}}
+  {{template "todo-detail" .}}
+{{else}}
+  {{template "todos-list" .}}
+{{end}}
 {{end}}
