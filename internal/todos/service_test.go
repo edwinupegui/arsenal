@@ -987,6 +987,36 @@ func TestSearch_EmptyQuery(t *testing.T) {
 	}
 }
 
+func TestCreate_RollbackOnValidation(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	in := validCreate()
+	in.Title = ""
+	if _, err := svc.Create(ctx, in); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	q := store.New(db)
+	count, err := q.CountOpenTodos(ctx)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected 0 todos, got %d", count)
+	}
+
+	// Verify no tags were inserted either
+	tags, err := q.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("list tags: %v", err)
+	}
+	if len(tags) != 0 {
+		t.Fatalf("expected 0 tags, got %d", len(tags))
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
