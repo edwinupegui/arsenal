@@ -76,6 +76,57 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Todo, error) {
 	return out, err
 }
 
+// Update replaces the mutable fields of todo id. Tag updates are handled as
+// detach-all-then-reattach with orphan pruning.
+func (s *Service) Update(ctx context.Context, id int64, in CreateInput) (*Todo, error) {
+	if err := validateCreate(in); err != nil {
+		return nil, err
+	}
+	tags, err := domain.NormalizeTags(in.Tags)
+	if err != nil {
+		return nil, err
+	}
+
+	var out *Todo
+	err = sqliteutil.WithTx(ctx, s.db, func(tx *sql.Tx) error {
+		q := s.q.WithTx(tx)
+		// Preserve current status — Update is not allowed to change status.
+		current, err := q.GetTodo(ctx, id)
+		if err != nil {
+			return fmt.Errorf("get todo: %w", err)
+		}
+		row, err := q.UpdateTodo(ctx, store.UpdateTodoParams{
+			Title:       strings.TrimSpace(in.Title),
+			Description: nullableStringPtr(in.Description),
+			Priority:    string(in.Priority),
+			Status:      current.Status,
+			DueDate:     in.DueDate,
+			CategoryID:  in.CategoryID,
+			Notes:       nullableStringPtr(in.Notes),
+			Recurrence:  string(in.Recurrence),
+			ID:          id,
+		})
+		if err != nil {
+			return fmt.Errorf("update todo: %w", err)
+		}
+		if err := q.DetachAllTagsFromTodo(ctx, id); err != nil {
+			return fmt.Errorf("detach tags: %w", err)
+		}
+		att := NewAttacher(q)
+		if err := domain.WithTags(ctx, s.db, tx, att, domain.AttachInput{
+			OwnerKind:    "todo",
+			OwnerID:      id,
+			Tags:         tags,
+			PruneOrphans: true,
+		}); err != nil {
+			return err
+		}
+		out = &Todo{Row: row, Tags: tags}
+		return nil
+	})
+	return out, err
+}
+
 // Get returns a todo and its tags. Returns sql.ErrNoRows if not found.
 func (s *Service) Get(ctx context.Context, id int64) (*Todo, error) {
 	row, err := s.q.GetTodo(ctx, id)

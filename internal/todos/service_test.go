@@ -174,6 +174,123 @@ func TestCreate_InvalidRecurrence(t *testing.T) {
 	}
 }
 
+func TestGet_Found(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.Get(ctx, created.Row.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Row.ID != created.Row.ID {
+		t.Errorf("id = %d, want %d", got.Row.ID, created.Row.ID)
+	}
+	if got.Row.Title != created.Row.Title {
+		t.Errorf("title = %q, want %q", got.Row.Title, created.Row.Title)
+	}
+	wantTags := []string{"casa", "urgente"}
+	if !equalStrings(got.Tags, wantTags) {
+		t.Errorf("tags = %v, want %v", got.Tags, wantTags)
+	}
+}
+
+func TestGet_NotFound(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Get(ctx, 999); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestUpdate_ChangesPriority(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	updated, err := svc.Update(ctx, created.Row.ID, todos.CreateInput{
+		Title:    created.Row.Title,
+		Priority: todos.PriorityLow,
+		Recurrence: todos.RecurrenceWeekly,
+	})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Row.Priority != "low" {
+		t.Errorf("priority = %q, want low", updated.Row.Priority)
+	}
+}
+
+func TestUpdate_TagReplacementPrunesOrphans(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	created, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	updated, err := svc.Update(ctx, created.Row.ID, todos.CreateInput{
+		Title:      created.Row.Title,
+		Priority:   todos.PriorityHigh,
+		Recurrence: todos.RecurrenceWeekly,
+		Tags:       []string{"ddd", "patterns"},
+	})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if !equalStrings(updated.Tags, []string{"ddd", "patterns"}) {
+		t.Errorf("after Update tags = %v", updated.Tags)
+	}
+
+	q := store.New(db)
+	tags, err := q.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("list tags: %v", err)
+	}
+	names := make(map[string]bool, len(tags))
+	for _, tag := range tags {
+		names[tag.Name] = true
+	}
+	for _, want := range []string{"ddd", "patterns"} {
+		if !names[want] {
+			t.Errorf("missing tag %q", want)
+		}
+	}
+	for _, gone := range []string{"casa", "urgente"} {
+		if names[gone] {
+			t.Errorf("orphan tag %q should have been pruned", gone)
+		}
+	}
+}
+
+func TestUpdate_NonExistentFails(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	if _, err := svc.Update(ctx, 999, todos.CreateInput{
+		Title:      "ghost",
+		Priority:   todos.PriorityMed,
+		Recurrence: todos.RecurrenceNone,
+	}); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
