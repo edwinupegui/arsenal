@@ -478,15 +478,12 @@ func (a App) statusLine() string {
 	if a.statusMsg != "" {
 		return statusOKStyle.Render(a.statusMsg)
 	}
+	area := areaNames[a.currentArea]
 	parts := []string{
-		keyStyle.Render("enter") + " detail",
-		keyStyle.Render("/") + " filter",
-		keyStyle.Render("s") + " search",
-		keyStyle.Render("t") + " trash",
-		keyStyle.Render("d") + " del",
-		keyStyle.Render("*") + " fav",
-		keyStyle.Render("o") + " open",
-		keyStyle.Render("q") + " quit",
+		keyStyle.Render(area),
+		keyStyle.Render("tab") + " next",
+		keyStyle.Render("shift+tab") + " prev",
+		keyStyle.Render("1-5") + " jump",
 	}
 	return mutedStyle.Render(strings.Join(parts, "  "))
 }
