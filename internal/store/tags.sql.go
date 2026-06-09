@@ -148,6 +148,37 @@ func (q *Queries) ListTagsForResource(ctx context.Context, resourceID int64) ([]
 	return items, nil
 }
 
+const listTagsForTodo = `-- name: ListTagsForTodo :many
+SELECT t.id, t.name
+FROM tags t
+JOIN todo_tags tt ON tt.tag_id = t.id
+WHERE tt.todo_id = ?
+ORDER BY t.name ASC
+`
+
+func (q *Queries) ListTagsForTodo(ctx context.Context, todoID int64) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, listTagsForTodo, todoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const renameTag = `-- name: RenameTag :one
 UPDATE tags SET name = ? WHERE id = ? RETURNING id, name
 `

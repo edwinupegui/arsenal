@@ -47,6 +47,24 @@ func wireCompletions(root *cobra.Command) {
 			c.ValidArgsFunction = completeTagNames
 		}
 	}
+
+	// Todo subcommand completions.
+	for _, name := range []string{"show", "done", "open", "rm", "restore", "edit", "purge"} {
+		if c, _, err := root.Find([]string{"todo", name}); err == nil {
+			c.ValidArgsFunction = completeTodoIDs
+		}
+	}
+	for _, name := range []string{"add", "list"} {
+		c, _, err := root.Find([]string{"todo", name})
+		if err != nil {
+			continue
+		}
+		_ = c.RegisterFlagCompletionFunc("cat", completeCategorySlugs)
+		_ = c.RegisterFlagCompletionFunc("tag", completeTagNames)
+		_ = c.RegisterFlagCompletionFunc("priority", completePriorities)
+		_ = c.RegisterFlagCompletionFunc("status", completeStatuses)
+		_ = c.RegisterFlagCompletionFunc("recurrence", completeRecurrences)
+	}
 }
 
 // completeResourceIDs returns recent resource IDs paired with title preview.
@@ -128,6 +146,43 @@ func completeLanguages(_ *cobra.Command, _ []string, _ string) ([]string, cobra.
 		out = append(out, string(l))
 	}
 	return out, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeTodoIDs returns recent todo IDs paired with title preview.
+func completeTodoIDs(cmd *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	app, err := initApp(cmd.Context())
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	defer app.DB.Close()
+
+	items, err := app.Queries.ListTodosFiltered(cmd.Context(), store.TodoListFilter{Limit: 200})
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	out := make([]string, 0, len(items))
+	for _, t := range items {
+		out = append(out, fmt.Sprintf("%d\t%s", t.Todo.ID, truncateForCompletion(t.Todo.Title, 50)))
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completePriorities is the static priority enum.
+func completePriorities(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"low", "med", "high"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeStatuses is the static status enum.
+func completeStatuses(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"open", "done"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeRecurrences is the static recurrence enum.
+func completeRecurrences(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"none", "daily", "weekly", "monthly"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 // truncateForCompletion shrinks long titles so the description column in

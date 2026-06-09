@@ -86,6 +86,64 @@ func buildFTSQuery(raw string) string {
 	return strings.Join(cleaned, " ")
 }
 
+// SearchTodos runs a full-text search over title/description/notes/tags using
+// FTS5 and returns results enriched with category info and aggregated tags,
+// matching the shape produced by ListTodosFiltered. Soft-deleted todos are
+// excluded.
+func (q *Queries) SearchTodos(ctx context.Context, query string, limit int64) ([]ListedTodo, error) {
+	match := buildFTSQuery(query)
+	if match == "" {
+		return []ListedTodo{}, nil
+	}
+
+	const stmt = `
+SELECT t.id, t.title, t.description, t.priority, t.status, t.due_date,
+       t.category_id, t.notes, t.recurrence, t.done_at, t.created_at, t.updated_at, t.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM todo_tags tt
+         JOIN tags tag ON tag.id = tt.tag_id
+         WHERE tt.todo_id = t.id
+       ) AS tag_csv
+FROM todos_fts f
+JOIN todos t ON t.id = f.rowid
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE todos_fts MATCH ?
+  AND t.deleted_at IS NULL
+ORDER BY rank
+LIMIT ?`
+
+	rows, err := q.db.QueryContext(ctx, stmt, match, limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedTodo
+	for rows.Next() {
+		var lt ListedTodo
+		var tagCSV string
+		if err := rows.Scan(
+			&lt.Todo.ID, &lt.Todo.Title, &lt.Todo.Description, &lt.Todo.Priority, &lt.Todo.Status,
+			&lt.Todo.DueDate, &lt.Todo.CategoryID, &lt.Todo.Notes, &lt.Todo.Recurrence,
+			&lt.Todo.DoneAt, &lt.Todo.CreatedAt, &lt.Todo.UpdatedAt, &lt.Todo.DeletedAt,
+			&lt.CategoryName, &lt.CategorySlug,
+			&tagCSV,
+		); err != nil {
+			return nil, fmt.Errorf("fts scan: %w", err)
+		}
+		if tagCSV != "" {
+			lt.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lt)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("fts iterate: %w", err)
+	}
+	return out, nil
+}
+
 func stripFTSSpecials(s string) string {
 	const specials = `"'()*:^-+`
 	return strings.Map(func(r rune) rune {
