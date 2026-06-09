@@ -8,8 +8,8 @@ import (
 func TestPlaceholderToday(t *testing.T) {
 	app := App{currentArea: areaToday, width: 80, height: 24}
 	view := app.View()
-	if !strings.Contains(view, "Today (coming soon — phase 3)") {
-		t.Errorf("Today placeholder not found in view:\n%s", view)
+	if !strings.Contains(view, "Nothing on your plate today") {
+		t.Errorf("Today empty state not found in view:\n%s", view)
 	}
 }
 

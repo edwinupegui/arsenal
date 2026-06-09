@@ -14,8 +14,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/edwinupegui/arsenal/internal/config"
+	"github.com/edwinupegui/arsenal/internal/configstore"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/today"
+	"github.com/edwinupegui/arsenal/internal/today/providers"
 	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
@@ -74,6 +78,10 @@ type App struct {
 
 	statusMsg string
 	statusErr error
+
+	// Today area state
+	todayService *today.Service
+	todayModel   todayModel
 
 	// Todos area state
 	todosService     *todos.Service
@@ -143,9 +151,26 @@ func New(db *sql.DB) App {
 	todoSearch.Prompt = "/ "
 	todoSearch.CharLimit = 200
 
+	initialArea := areaToday
+	if db != nil {
+		cs := configstore.New(db)
+		if v, err := cs.GetDefault(context.Background(), config.KeyLandingSurface); err == nil {
+			switch v {
+			case "resources":
+				initialArea = areaResources
+			default:
+				initialArea = areaToday
+			}
+		}
+	}
+
+	todaySvc := today.New(db)
+	todaySvc.Register(providers.NewTodosProvider(db))
+	todaySvc.Register(providers.NewResourcesProvider(db))
+
 	return App{
 		state:       viewList,
-		currentArea: areaResources,
+		currentArea: initialArea,
 		db:          db,
 		queries:     store.New(db),
 		service:     resources.New(db),
@@ -153,6 +178,8 @@ func New(db *sql.DB) App {
 		list:        l,
 		detail:      newDetailModel(),
 		searchIn:    si,
+		// Today area initialized here
+		todayService: todaySvc,
 		// Todos area initialized here
 		todosService: todos.New(db),
 		todoList:     todoList,
@@ -260,6 +287,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch a.currentArea {
+	case areaToday:
+		return a.updateToday(msg)
 	case areaTodos:
 		return a.updateTodos(msg)
 	case areaResources:
@@ -405,7 +434,7 @@ func (a App) View() string {
 	var body string
 	switch a.currentArea {
 	case areaToday:
-		body = placeholderView("Today (coming soon — phase 3)", a.width, a.height)
+		body = a.viewToday()
 	case areaFinance:
 		body = placeholderView("Finance (coming soon — v3.x)", a.width, a.height)
 	case areaCalendar:
@@ -485,6 +514,9 @@ func (a App) statusLine() string {
 		keyStyle.Render("shift+tab") + " prev",
 		keyStyle.Render("1-5") + " jump",
 	}
+	if a.currentArea == areaToday {
+		parts = append(parts, keyStyle.Render("r")+" refresh", keyStyle.Render("n")+" new")
+	}
 	return mutedStyle.Render(strings.Join(parts, "  "))
 }
 
@@ -500,6 +532,8 @@ func (a App) selectedItem() (resourceItem, bool) {
 // loadCurrentAreaCmd returns a command to load data for the current area.
 func (a App) loadCurrentAreaCmd() tea.Cmd {
 	switch a.currentArea {
+	case areaToday:
+		return reloadTodayCmd(a.todayService)
 	case areaResources:
 		return loadResourcesCmd(a.queries, a.showTrashed)
 	case areaTodos:
