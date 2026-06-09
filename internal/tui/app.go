@@ -351,24 +351,44 @@ func (a App) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View composes the active view with a status line at the bottom.
 func (a App) View() string {
 	var body string
-	switch a.state {
-	case viewDetail:
-		body = a.detail.View()
-	case viewConfirmDelete:
-		body = a.confirm.view(a.width, a.height)
-	case viewSearchInput:
-		body = renderSearchOverlay(a.searchIn.View(), a.width, a.height)
-	default:
-		header := ""
-		if a.showTrashed {
-			header = trashBannerStyle.Render(" TRASH ") + "\n"
+	switch a.currentArea {
+	case areaToday:
+		body = placeholderView("Today (coming soon — phase 3)", a.width, a.height)
+	case areaFinance:
+		body = placeholderView("Finance (coming soon — v3.x)", a.width, a.height)
+	case areaCalendar:
+		body = placeholderView("Calendar (coming soon — v3.x)", a.width, a.height)
+	case areaTodos:
+		body = placeholderView("Todos (coming soon — phase 3)", a.width, a.height)
+	case areaResources:
+		switch a.state {
+		case viewDetail:
+			body = a.detail.View()
+		case viewConfirmDelete:
+			body = a.confirm.view(a.width, a.height)
+		case viewSearchInput:
+			body = renderSearchOverlay(a.searchIn.View(), a.width, a.height)
+		default:
+			header := ""
+			if a.showTrashed {
+				header = trashBannerStyle.Render(" TRASH ") + "\n"
+			}
+			if a.searchActive != "" {
+				header += mutedStyle.Render(fmt.Sprintf("  search: %q  (c to clear)", a.searchActive)) + "\n"
+			}
+			body = header + a.list.View()
 		}
-		if a.searchActive != "" {
-			header += mutedStyle.Render(fmt.Sprintf("  search: %q  (c to clear)", a.searchActive)) + "\n"
-		}
-		body = header + a.list.View()
 	}
 	return body + "\n" + a.statusLine()
+}
+
+func placeholderView(text string, width, height int) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorMuted).
+		Padding(1, 2).
+		Render(text)
+	return lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center, box)
 }
 
 // renderSearchOverlay centers a small bordered prompt over the screen.
