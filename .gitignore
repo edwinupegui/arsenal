@@ -25,3 +25,6 @@ coverage.html
 
 # Tools cache
 .tools/
+# Local Pi runtime state
+.atl/
+.pi/
