@@ -48,8 +48,13 @@ func TestApp_AreaToday_NKeyOpensNewTodo(t *testing.T) {
 	app := New(nil)
 	app.currentArea = areaToday
 	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	if got := model.(App).currentArea; got != areaTodos {
-		t.Errorf("n key: area = %d, want areaTodos", got)
+	a := model.(App)
+	// v3.0.1: n in areaToday opens an inline new-todo form (no longer
+	// switches to areaTodos). See today_new_form_test.go for the form
+	// behavior tests.
+	if a.todayState != todayStateNewForm {
+		t.Errorf("n key: todayState = %d, want todayStateNewForm (%d)",
+			a.todayState, todayStateNewForm)
 	}
 }
 

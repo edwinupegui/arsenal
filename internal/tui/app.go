@@ -82,6 +82,8 @@ type App struct {
 	// Today area state
 	todayService *today.Service
 	todayModel   todayModel
+	todayState   todayViewState
+	newTodoForm  newTodoFormModel
 
 	// Todos area state
 	todosService     *todos.Service
@@ -185,6 +187,7 @@ func New(db *sql.DB) App {
 		todoList:     todoList,
 		todoDetail:   newTodoDetailModel(),
 		todoSearchIn: todoSearch,
+		newTodoForm:  newNewTodoFormModel(),
 	}
 }
 
@@ -515,7 +518,14 @@ func (a App) statusLine() string {
 		keyStyle.Render("1-5") + " jump",
 	}
 	if a.currentArea == areaToday {
-		parts = append(parts, keyStyle.Render("r")+" refresh", keyStyle.Render("n")+" new")
+		if a.todayState == todayStateNewForm {
+			parts = append(parts,
+				keyStyle.Render("enter")+" save",
+				keyStyle.Render("esc")+" cancel",
+			)
+		} else {
+			parts = append(parts, keyStyle.Render("r")+" refresh", keyStyle.Render("n")+" new")
+		}
 	}
 	return mutedStyle.Render(strings.Join(parts, "  "))
 }
