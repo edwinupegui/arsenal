@@ -68,6 +68,7 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newEditCmd())
 	root.AddCommand(newConfigCmd())
 	root.AddCommand(newTodoCmd())
+	root.AddCommand(newTodayCmd())
 
 	wireCompletions(root)
 
