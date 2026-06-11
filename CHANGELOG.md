@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limitations
 
-- **Timezone handling** — `date('now')` in SQLite is UTC. Due-today comparison may be off by hours for non-UTC users. Documented; separate ADR planned for v3.0.1.
+- **Timezone handling** — `date('now')` in SQLite is UTC. Due-today comparison may be off by hours for non-UTC users. ADR-0003 accepted; implementation deferred to a follow-up.
 
 ### References
 
