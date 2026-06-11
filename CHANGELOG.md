@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limitations
 
+- **CLI `arsenal today` command deferred to v3.0.1** — the spec calls for a CLI surface for the Today view (REQ-TV-08), but the TUI and web surfaces are the only shipped entry points in v3.0. The underlying `today.Service.Build()` is in place; only the Cobra command and 1 test are missing. Tracked for v3.0.1.
 - **Timezone handling** — `date('now')` in SQLite is UTC. Due-today comparison may be off by hours for non-UTC users. Documented; separate ADR planned for v3.0.1.
 - **TUI new-todo form** — `n` key in `areaToday` switches to `areaTodos` (no inline form yet; follow-up in v3.x).
 
