@@ -216,6 +216,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]*Todo, error) {
 		OnlyOverdue:  f.OnlyOverdue,
 		Today:        today,
 		DueBefore:    f.DueBefore,
+		DueAfter:     f.DueAfter,
 		Trashed:      f.Trashed,
 		Limit:        f.Limit,
 		Offset:       f.Offset,

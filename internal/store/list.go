@@ -134,6 +134,7 @@ type TodoListFilter struct {
 	OnlyOverdue  bool
 	Today        string // ISO-8601 date used when OnlyOverdue is true
 	DueBefore    string
+	DueAfter     string // ISO-8601 date; rows with due_date < DueAfter are excluded
 	Trashed      bool
 	Limit        int
 	Offset       int
@@ -198,6 +199,10 @@ LEFT JOIN categories c ON c.id = t.category_id`
 	if filter.DueBefore != "" {
 		conds = append(conds, "t.due_date < ? AND t.due_date IS NOT NULL")
 		args = append(args, filter.DueBefore)
+	}
+	if filter.DueAfter != "" {
+		conds = append(conds, "t.due_date >= ? AND t.due_date IS NOT NULL")
+		args = append(args, filter.DueAfter)
 	}
 
 	q1 := base

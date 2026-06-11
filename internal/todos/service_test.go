@@ -741,6 +741,34 @@ func TestList_FilterOverdue(t *testing.T) {
 	}
 }
 
+func TestList_FilterDueAfter(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := todos.New(db)
+
+	past := "2020-01-01"
+	future := "2099-01-01"
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "before", DueDate: &past}); err != nil {
+		t.Fatalf("Create before: %v", err)
+	}
+	after, err := svc.Create(ctx, todos.CreateInput{Title: "after", DueDate: &future})
+	if err != nil {
+		t.Fatalf("Create after: %v", err)
+	}
+
+	// DueAfter=2025-01-01 should match only the future-dated todo.
+	got, err := svc.List(ctx, todos.ListFilter{DueAfter: "2025-01-01"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1 (only the 'after' todo)", len(got))
+	}
+	if got[0].Row.ID != after.Row.ID {
+		t.Errorf("id = %d, want %d", got[0].Row.ID, after.Row.ID)
+	}
+}
+
 func TestList_FilterDueBefore(t *testing.T) {
 	ctx := context.Background()
 	db := newTestDB(t)

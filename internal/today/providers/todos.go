@@ -75,19 +75,22 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 		})
 	}
 
-	// Upcoming
+	// Upcoming (tomorrow through today+7 days). Filtering happens in SQL
+	// via DueAfter/DueBefore so the limit is accurate even when the user
+	// has many open todos. Service.Build caps to density (5) and sets
+	// ShowAllURL when the provider returns more.
 	upcomingRows, err := p.queries.ListTodosFiltered(ctx, store.TodoListFilter{
-		Status: "open",
-		Limit:  100, // practical upper bound; Service.Build caps to density (5) and sets ShowAllURL
+		Status:    "open",
+		DueAfter:  tomorrowStr,
+		DueBefore: weekLaterStr,
+		Limit:     100,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upcoming query: %w", err)
 	}
 	var upcomingItems []today.Item
 	for _, row := range upcomingRows {
-		if row.Todo.DueDate != nil && *row.Todo.DueDate >= tomorrowStr && *row.Todo.DueDate <= weekLaterStr {
-			upcomingItems = append(upcomingItems, mapTodoItem(row))
-		}
+		upcomingItems = append(upcomingItems, mapTodoItem(row))
 	}
 	if len(upcomingItems) > 0 {
 		sections = append(sections, today.Section{

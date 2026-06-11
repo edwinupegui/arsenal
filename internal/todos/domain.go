@@ -98,6 +98,7 @@ type ListFilter struct {
 	Priority     Priority
 	OnlyOverdue  bool
 	DueBefore    string
+	DueAfter     string // ISO-8601 date; rows with due_date < DueAfter are excluded
 	Trashed      bool
 	Limit        int
 	Offset       int
