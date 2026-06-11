@@ -43,8 +43,12 @@ func TestResourcesProvider_RecentSection(t *testing.T) {
 	if secs[0].Key != "recent" {
 		t.Errorf("key = %q, want recent", secs[0].Key)
 	}
-	if len(secs[0].Items) != 5 {
-		t.Errorf("items = %d, want 5", len(secs[0].Items))
+	// Provider returns all matching rows (up to its practical limit);
+	// density truncation to 5 + ShowAllURL setting is the Service's job.
+	// See internal/today/integration_test.go::TestService_Build_ShowAllURLOnRecentOverflow
+	// for the end-to-end cap behavior.
+	if len(secs[0].Items) != 8 {
+		t.Errorf("items = %d, want 8 (provider should not cap; Service caps)", len(secs[0].Items))
 	}
 }
 

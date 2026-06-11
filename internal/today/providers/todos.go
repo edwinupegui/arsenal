@@ -37,7 +37,7 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 		OnlyOverdue: true,
 		Today:       todayStr,
 		Status:      "open",
-		Limit:       5,
+		Limit:       100, // practical upper bound; Service.Build caps to density (5) and sets ShowAllURL
 	})
 	if err != nil {
 		return nil, fmt.Errorf("overdue query: %w", err)
@@ -55,7 +55,7 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 	dueTodayRows, err := p.queries.ListTodosFiltered(ctx, store.TodoListFilter{
 		DueBefore: tomorrowStr,
 		Status:    "open",
-		Limit:     50,
+		Limit:     100, // practical upper bound; Service.Build caps to density (5) and sets ShowAllURL
 	})
 	if err != nil {
 		return nil, fmt.Errorf("due-today query: %w", err)
@@ -65,9 +65,6 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 		if row.Todo.DueDate != nil && *row.Todo.DueDate == todayStr {
 			dueTodayItems = append(dueTodayItems, mapTodoItem(row))
 		}
-	}
-	if len(dueTodayItems) > 5 {
-		dueTodayItems = dueTodayItems[:5]
 	}
 	if len(dueTodayItems) > 0 {
 		sections = append(sections, today.Section{
@@ -81,7 +78,7 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 	// Upcoming
 	upcomingRows, err := p.queries.ListTodosFiltered(ctx, store.TodoListFilter{
 		Status: "open",
-		Limit:  50,
+		Limit:  100, // practical upper bound; Service.Build caps to density (5) and sets ShowAllURL
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upcoming query: %w", err)
@@ -91,9 +88,6 @@ func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
 		if row.Todo.DueDate != nil && *row.Todo.DueDate >= tomorrowStr && *row.Todo.DueDate <= weekLaterStr {
 			upcomingItems = append(upcomingItems, mapTodoItem(row))
 		}
-	}
-	if len(upcomingItems) > 5 {
-		upcomingItems = upcomingItems[:5]
 	}
 	if len(upcomingItems) > 0 {
 		sections = append(sections, today.Section{

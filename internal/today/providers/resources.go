@@ -22,9 +22,11 @@ func NewResourcesProvider(db *sql.DB) *ResourcesProvider {
 // Name returns the provider identifier.
 func (p *ResourcesProvider) Name() string { return "resources" }
 
-// Sections returns one section: recent resources (last 5 created).
+// Sections returns one section: recent resources. Limit is a practical
+// upper bound; today.Service.Build caps to density (5) and sets the
+// "show all" URL when the provider returns more.
 func (p *ResourcesProvider) Sections(ctx context.Context) ([]today.Section, error) {
-	rows, err := p.queries.ListResourcesFiltered(ctx, store.ListFilter{Limit: 5})
+	rows, err := p.queries.ListResourcesFiltered(ctx, store.ListFilter{Limit: 100})
 	if err != nil {
 		return nil, fmt.Errorf("recent resources query: %w", err)
 	}

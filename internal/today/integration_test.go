@@ -119,3 +119,97 @@ func TestService_Build_Integration(t *testing.T) {
 		// no overflow expected
 	}
 }
+
+// TestService_Build_ShowAllURLOnOverflow seeds 7 overdue todos and asserts
+// the overdue section is truncated to 5 with ShowAllURL set. This is the
+// regression for the v3.0 follow-up: previously providers capped at 5
+// before Service.Build saw the data, so ShowAllURL never triggered.
+func TestService_Build_ShowAllURLOnOverflow(t *testing.T) {
+	db := newTestDB(t)
+	ctx := context.Background()
+	svc := todos.New(db)
+	yesterday := yesterdayStr()
+	for i := 0; i < 7; i++ {
+		_, err := svc.Create(ctx, todos.CreateInput{
+			Title:    "overdue " + string(rune('a'+i)),
+			Priority: todos.PriorityHigh,
+			DueDate:  &yesterday,
+		})
+		if err != nil {
+			t.Fatalf("seed overdue: %v", err)
+		}
+	}
+
+	reg := today.NewRegistry()
+	reg.Register(providers.NewTodosProvider(db))
+	reg.Register(providers.NewResourcesProvider(db))
+	todaySvc := today.NewWithRegistry(reg)
+
+	secs, errs := todaySvc.Build(ctx)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected provider errors: %v", errs)
+	}
+	if len(secs) == 0 {
+		t.Fatal("expected at least one section (overdue)")
+	}
+	overdue := secs[0]
+	if overdue.Key != "overdue" {
+		t.Fatalf("first section key = %q, want overdue", overdue.Key)
+	}
+	if len(overdue.Items) > 5 {
+		t.Errorf("overdue section has %d items, want ≤ 5 (density cap)", len(overdue.Items))
+	}
+	if len(overdue.Items) != 5 {
+		t.Errorf("overdue section has %d items, want exactly 5 (truncated from 7)", len(overdue.Items))
+	}
+	if overdue.ShowAllURL == "" {
+		t.Error("ShowAllURL empty on overflow section; expected '/todos?status=open&overdue=true'")
+	}
+	if overdue.ShowAllURL != "/todos?status=open&overdue=true" {
+		t.Errorf("ShowAllURL = %q, want /todos?status=open&overdue=true", overdue.ShowAllURL)
+	}
+}
+
+// TestService_Build_ShowAllURLOnRecentOverflow seeds 8 resources and asserts
+// the recent section is truncated to 5 with ShowAllURL set to /resources.
+func TestService_Build_ShowAllURLOnRecentOverflow(t *testing.T) {
+	db := newTestDB(t)
+	ctx := context.Background()
+	svc := resources.New(db)
+	for i := 0; i < 8; i++ {
+		_, err := svc.Create(ctx, resources.CreateInput{
+			Title:    "Resource " + string(rune('a'+i)),
+			URL:      "https://example.com/" + string(rune('a'+i)),
+			Type:     "article",
+			Language: "EN",
+		})
+		if err != nil {
+			t.Fatalf("seed resource: %v", err)
+		}
+	}
+
+	reg := today.NewRegistry()
+	reg.Register(providers.NewResourcesProvider(db))
+	todaySvc := today.NewWithRegistry(reg)
+
+	secs, errs := todaySvc.Build(ctx)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected provider errors: %v", errs)
+	}
+	if len(secs) != 1 {
+		t.Fatalf("expected 1 section (recent), got %d", len(secs))
+	}
+	recent := secs[0]
+	if recent.Key != "recent" {
+		t.Errorf("section key = %q, want recent", recent.Key)
+	}
+	if len(recent.Items) != 5 {
+		t.Errorf("recent section has %d items, want exactly 5 (truncated from 8)", len(recent.Items))
+	}
+	if recent.ShowAllURL == "" {
+		t.Error("ShowAllURL empty on recent overflow; expected '/resources'")
+	}
+	if recent.ShowAllURL != "/resources" {
+		t.Errorf("ShowAllURL = %q, want /resources", recent.ShowAllURL)
+	}
+}
