@@ -36,6 +36,10 @@ const (
 	// the sidebar (web) and the TUI area switcher. Valid items are the five
 	// domain names: resources, todos, today, finance, calendar.
 	KeyActiveDomains Key = "active_domains"
+
+	// KeyUserTimezone is the IANA timezone for date comparisons (e.g.,
+	// America/Argentina/Buenos_Aires). Defaults to UTC.
+	KeyUserTimezone Key = "user_timezone"
 )
 
 // Type is the parsed type of a config value. The on-disk representation is
@@ -79,6 +83,11 @@ var Catalog = map[Key]KeyMeta{
 		Default:     "resources,todos",
 		Description: "Comma-separated list of domains shown in the sidebar and TUI area switcher.",
 		Validate:    validateActiveDomains,
+	},
+	KeyUserTimezone: {
+		Type:        TypeString,
+		Default:     "UTC",
+		Description: "IANA timezone for date comparisons (e.g., America/Argentina/Buenos_Aires).",
 	},
 }
 

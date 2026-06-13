@@ -13,11 +13,13 @@ import (
 // TodosProvider contributes overdue, due-today, and upcoming todo sections.
 type TodosProvider struct {
 	queries *store.Queries
+	db      *sql.DB
+	now     func() time.Time
 }
 
 // NewTodosProvider builds a TodosProvider backed by db.
 func NewTodosProvider(db *sql.DB) *TodosProvider {
-	return &TodosProvider{queries: store.New(db)}
+	return &TodosProvider{queries: store.New(db), db: db, now: time.Now}
 }
 
 // Name returns the provider identifier.
@@ -25,7 +27,11 @@ func (p *TodosProvider) Name() string { return "todos" }
 
 // Sections returns up to three sections: overdue, due-today, upcoming.
 func (p *TodosProvider) Sections(ctx context.Context) ([]today.Section, error) {
-	now := time.Now().UTC()
+	loc, err := today.UserLocation(ctx, p.db)
+	if err != nil {
+		return nil, err
+	}
+	now := p.now().In(loc)
 	todayStr := now.Format("2006-01-02")
 	tomorrowStr := now.AddDate(0, 0, 1).Format("2006-01-02")
 	weekLaterStr := now.AddDate(0, 0, 7).Format("2006-01-02")
