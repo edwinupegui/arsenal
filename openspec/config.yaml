@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  Go 1.26 single-binary CLI + TUI (Bubble Tea) + Web (go-chi/chi).
+  SQLite via modernc.org/sqlite, sqlc codegen, goose migrations.
+  Typed config catalog (configstore). Provider registry pattern for cross-domain Today view.
+  v3.0.0 feature-complete: todos + resources + Today view across TUI, web, CLI.
+  v3.x deferred: Finance, Calendar domains.
+
+strict_tdd: true
+
+testing:
+  runner: "go test ./... -race -count=1"
+  coverage_command: "go test ./... -race -count=1 -coverprofile=coverage.out"
+  build_command: "go build ./..."
+  vet_command: "go vet ./..."
+  lint_command: "golangci-lint run ./..."
+  framework: "stdlib testing"
+  strict_tdd: true
+
+conventions:
+  commit_style: "conventional commits (feat/fix/docs/chore/test/refactor)"
+  no_ai_attribution: true
+  language_contract: "English for code, commits, UI; Spanish for chat"
+  branch_model: "develop → main via manual PR"
+  migration_policy: "forward-only, goose, sqlite3"
+  test_style: "table-driven with t.Run; _test package for external; in-package for mocks"
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Reference ADRs when decisions exist
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    - Strict TDD: RED → GREEN → REFACTOR
+    tdd: true
+    test_command: "go test ./... -race -count=1"
+  verify:
+    test_command: "go test ./... -race -count=1"
+    build_command: "go build ./..."
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

@@ -10,6 +10,8 @@ Concrete `Provider` implementations for v3.0: `TodosProvider` (contributing over
 
 The system MUST provide a `TodosProvider` that implements the `Provider` interface and returns up to three sections: "overdue" (todos with `due_date < today` and `status = open`), "due-today" (todos with `due_date = today` and `status = open`), and "upcoming" (todos with `due_date` between tomorrow and 7 days from now, `status = open`). Each section's title SHALL be human-readable: "Overdue", "Due Today", "Upcoming".
 
+The `TodosProvider` MUST compute "today" using the user's configured timezone via `internal/today.UserLocation`. When `KeyUserTimezone` is set to a valid IANA timezone, all date boundaries (today, tomorrow, today+7d) SHALL be derived from `time.Now().In(loc)`. When `KeyUserTimezone` is unset or contains an invalid IANA value, the provider SHALL fall back to UTC silently, preserving v3.0 behavior.
+
 ### REQ-TP-02: TodosProvider overdue query
 
 The overdue section MUST use `ListTodosDueBefore(today)` or equivalent, filtering to `status = open` and `deleted_at IS NULL`. Items SHALL be sorted by `due_date ASC` (most overdue first), then by `priority DESC`.
@@ -83,6 +85,22 @@ Both providers MUST map their domain rows into the common `Item` struct (REQ-TV-
 - **GIVEN** a todo with ID 42, title "pay rent", due 2026-06-09, priority high, tags ["urgent"]
 - **WHEN** the todo is mapped to an `Item`
 - **THEN** `Domain="todos"`, `Title="pay rent"`, `Subtitle="2026-06-09"`, `Priority="high"`, `Tags=["urgent"]`, `URL="/todos/42"`
+
+### Scenario: TodosProvider uses configured timezone for day boundaries
+
+- **GIVEN** `KeyUserTimezone` is set to `America/Argentina/Buenos_Aires` (UTC−3)
+- **AND** current UTC time is 2026-06-12 02:00 (2026-06-11 23:00 local)
+- **AND** an open todo has `due_date = 2026-06-11`
+- **WHEN** `TodosProvider.Sections(ctx)` is called
+- **THEN** the todo appears in the "due-today" section (local today is 2026-06-11)
+
+### Scenario: TodosProvider defaults to UTC when timezone unset
+
+- **GIVEN** `KeyUserTimezone` is unset (default `"UTC"`)
+- **AND** current UTC time is 2026-06-12 02:00
+- **AND** an open todo has `due_date = 2026-06-11`
+- **WHEN** `TodosProvider.Sections(ctx)` is called
+- **THEN** the todo appears in the "overdue" section (UTC today is 2026-06-12)
 
 ## Out of Scope
 
