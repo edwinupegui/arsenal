@@ -1,15 +1,19 @@
 package web
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 
+	"github.com/edwinupegui/arsenal/internal/config"
+	"github.com/edwinupegui/arsenal/internal/configstore"
 	"github.com/edwinupegui/arsenal/internal/migrations"
 	"github.com/edwinupegui/arsenal/internal/store"
 	"github.com/edwinupegui/arsenal/internal/todos"
@@ -75,5 +79,44 @@ func TestTodoRoutes(t *testing.T) {
 				t.Fatalf("%s %s: want %d, got %d", c.method, c.path, c.want, rr.Code)
 			}
 		})
+	}
+}
+
+func TestOverdueBadge_Timezone(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+
+	cs := configstore.New(db)
+	if err := cs.Set(ctx, config.KeyUserTimezone, "America/Argentina/Buenos_Aires"); err != nil {
+		t.Fatalf("Set timezone: %v", err)
+	}
+
+	svc := todos.New(db)
+	borderline := "2026-06-11"
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "borderline", DueDate: &borderline}); err != nil {
+		t.Fatalf("Create borderline: %v", err)
+	}
+
+	// 2026-06-12 02:00 UTC == 2026-06-11 23:00 in America/Argentina/Buenos_Aires.
+	fixed := time.Date(2026, 6, 12, 2, 0, 0, 0, time.UTC)
+	got, err := countOverdueTodos(ctx, db, fixed)
+	if err != nil {
+		t.Fatalf("countOverdueTodos: %v", err)
+	}
+	if got != 0 {
+		t.Errorf("count = %d, want 0 (borderline todo is due-today in America/Argentina/Buenos_Aires)", got)
+	}
+
+	// A day earlier is still overdue regardless of timezone.
+	overdue := "2026-06-10"
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "overdue", DueDate: &overdue}); err != nil {
+		t.Fatalf("Create overdue: %v", err)
+	}
+	got, err = countOverdueTodos(ctx, db, fixed)
+	if err != nil {
+		t.Fatalf("countOverdueTodos: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("count = %d, want 1", got)
 	}
 }

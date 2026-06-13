@@ -6,7 +6,10 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/edwinupegui/arsenal/internal/config"
+	"github.com/edwinupegui/arsenal/internal/configstore"
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/store"
 	"github.com/edwinupegui/arsenal/internal/todos"
@@ -1042,6 +1045,41 @@ func TestCreate_RollbackOnValidation(t *testing.T) {
 	}
 	if len(tags) != 0 {
 		t.Fatalf("expected 0 tags, got %d", len(tags))
+	}
+}
+
+func TestList_FilterOverdue_Timezone(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+
+	cs := configstore.New(db)
+	if err := cs.Set(ctx, config.KeyUserTimezone, "America/Argentina/Buenos_Aires"); err != nil {
+		t.Fatalf("Set timezone: %v", err)
+	}
+
+	// 2026-06-12 02:00 UTC == 2026-06-11 23:00 in America/Argentina/Buenos_Aires.
+	fixed := time.Date(2026, 6, 12, 2, 0, 0, 0, time.UTC)
+	svc := todos.New(db, todos.WithClock(func() time.Time { return fixed }))
+
+	borderline := "2026-06-11" // due-today in Argentina, overdue in UTC
+	overdue := "2026-06-10"    // overdue in both
+	if _, err := svc.Create(ctx, todos.CreateInput{Title: "borderline", DueDate: &borderline}); err != nil {
+		t.Fatalf("Create borderline: %v", err)
+	}
+	want, err := svc.Create(ctx, todos.CreateInput{Title: "overdue", DueDate: &overdue})
+	if err != nil {
+		t.Fatalf("Create overdue: %v", err)
+	}
+
+	got, err := svc.List(ctx, todos.ListFilter{OnlyOverdue: true})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.ID != want.Row.ID {
+		t.Errorf("id = %d, want %d (borderline todo should not be overdue)", got[0].Row.ID, want.Row.ID)
 	}
 }
 
