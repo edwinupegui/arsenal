@@ -9,8 +9,11 @@ import (
 
 	"github.com/edwinupegui/arsenal/internal/config"
 	"github.com/edwinupegui/arsenal/internal/configstore"
+	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/finance"
+	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
 func strPtr(s string) *string { return &s }
@@ -1037,5 +1040,59 @@ func TestWithClock(t *testing.T) {
 	}
 	if got.Row.Date != "2026-06-15" {
 		t.Errorf("date = %q, want 2026-06-15", got.Row.Date)
+	}
+}
+
+func TestOrphanCleanup_CoversAllDomains(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+
+	resSvc := resources.New(db)
+	todoSvc := todos.New(db)
+	finSvc := finance.New(db)
+
+	res, err := resSvc.Create(ctx, resources.CreateInput{
+		Title:    "res",
+		URL:      "https://example.com/res",
+		Type:     domain.TypeArticle,
+		Language: domain.LangEN,
+		Tags:     []string{"res-only"},
+	})
+	if err != nil {
+		t.Fatalf("Create resource: %v", err)
+	}
+	todo, err := todoSvc.Create(ctx, todos.CreateInput{
+		Title: "todo",
+		Tags:  []string{"todo-only"},
+	})
+	if err != nil {
+		t.Fatalf("Create todo: %v", err)
+	}
+	fin, err := finSvc.Create(ctx, finance.CreateInput{
+		Amount: 10.00,
+		Kind:   finance.KindExpense,
+		Tags:   []string{"finance-only"},
+	})
+	if err != nil {
+		t.Fatalf("Create finance: %v", err)
+	}
+
+	if err := resSvc.Purge(ctx, res.Row.ID); err != nil {
+		t.Fatalf("Purge resource: %v", err)
+	}
+	if err := todoSvc.Purge(ctx, todo.Row.ID); err != nil {
+		t.Fatalf("Purge todo: %v", err)
+	}
+	if err := finSvc.Purge(ctx, fin.Row.ID); err != nil {
+		t.Fatalf("Purge finance: %v", err)
+	}
+
+	q := store.New(db)
+	tags, err := q.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("list tags: %v", err)
+	}
+	if len(tags) != 0 {
+		t.Errorf("expected 0 orphan tags across all domains, got %v", tags)
 	}
 }

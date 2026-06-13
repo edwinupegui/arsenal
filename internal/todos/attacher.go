@@ -32,8 +32,9 @@ func (a *Attacher) AttachTagToOwner(ctx context.Context, tagID, ownerID int64) e
 	})
 }
 
-// DeleteOrphanTags removes tag rows that no todo_tags or resource_tags row references.
-// Delegates to the shared query because it already covers both domains.
+// DeleteOrphanTags removes tag rows that no todo_tags, resource_tags, or
+// finance_tags row references. Delegates to the shared query because it
+// already covers all three domains.
 func (a *Attacher) DeleteOrphanTags(ctx context.Context) error {
 	return a.q.DeleteOrphanTags(ctx)
 }

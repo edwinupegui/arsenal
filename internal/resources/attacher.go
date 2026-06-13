@@ -43,8 +43,8 @@ func (a *Attacher) AttachTagToOwner(ctx context.Context, tagID, ownerID int64) e
 }
 
 // DeleteOrphanTags removes tag rows that no resource_tags row references.
-// Covers resource_tags and todo_tags; extend the UNION when new tag-attachable
-// domains are added in phase 3+.
+// Covers resource_tags, todo_tags, and finance_tags; extend the UNION when
+// new tag-attachable domains are added.
 func (a *Attacher) DeleteOrphanTags(ctx context.Context) error {
 	return a.q.DeleteOrphanTags(ctx)
 }
