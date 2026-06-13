@@ -864,6 +864,150 @@ func TestExport(t *testing.T) {
 	}
 }
 
+func TestExport_WithFilter(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := finance.New(db)
+
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Date:    "2026-06-10",
+		Amount:  10.00,
+		Kind:    finance.KindExpense,
+		Account: "a",
+		Tags:    []string{"x"},
+	}); err != nil {
+		t.Fatalf("Create a: %v", err)
+	}
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Date:    "2026-06-11",
+		Amount:  20.00,
+		Kind:    finance.KindIncome,
+		Account: "b",
+		Tags:    []string{"y"},
+	}); err != nil {
+		t.Fatalf("Create b: %v", err)
+	}
+
+	kind := "income"
+	got, err := svc.Export(ctx, finance.Filter{Kind: &kind})
+	if err != nil {
+		t.Fatalf("Export: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Kind != "income" {
+		t.Errorf("kind = %q, want income", got[0].Kind)
+	}
+	if !equalStrings(got[0].Tags, []string{"y"}) {
+		t.Errorf("tags = %v, want [y]", got[0].Tags)
+	}
+}
+
+func TestList_SearchNotes(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := finance.New(db)
+
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  10.00,
+		Kind:    finance.KindExpense,
+		Account: "a",
+		Notes:   "monthly grocery run",
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  20.00,
+		Kind:    finance.KindExpense,
+		Account: "b",
+		Notes:   "subscription renewal",
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, finance.Filter{Search: "grocery"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.Account != "a" {
+		t.Errorf("account = %q, want a", got[0].Row.Account)
+	}
+}
+
+func TestList_SearchAccount(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := finance.New(db)
+
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  10.00,
+		Kind:    finance.KindExpense,
+		Account: "banco nación",
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  20.00,
+		Kind:    finance.KindExpense,
+		Account: "cash",
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, finance.Filter{Search: "nación"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.Account != "banco nación" {
+		t.Errorf("account = %q, want banco nación", got[0].Row.Account)
+	}
+}
+
+func TestList_SearchExcludesTrashed(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	svc := finance.New(db)
+
+	trashed, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  10.00,
+		Kind:    finance.KindExpense,
+		Account: "a",
+		Notes:   "searchable note",
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.SoftDelete(ctx, trashed.Row.ID); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+	if _, err := svc.Create(ctx, finance.CreateInput{
+		Amount:  20.00,
+		Kind:    finance.KindExpense,
+		Account: "b",
+		Notes:   "searchable note",
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := svc.List(ctx, finance.Filter{Search: "searchable"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Row.Account != "b" {
+		t.Errorf("account = %q, want b", got[0].Row.Account)
+	}
+}
+
 func TestExport_Empty(t *testing.T) {
 	ctx := context.Background()
 	db := newTestDB(t)
