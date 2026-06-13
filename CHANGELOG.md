@@ -28,9 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-cutting validation** — shared `domain.WithTags` helper now validated by both `resources` and `todos` domains.
 - **Provider registry pattern** — validates ADR-0002 Change 4: cross-domain aggregation via independent providers with graceful degradation.
 
-### Known limitations
+### Fixed
 
-- **Timezone handling** — `date('now')` in SQLite is UTC. Due-today comparison may be off by hours for non-UTC users. ADR-0003 accepted; implementation deferred to a follow-up.
+- **Timezone handling** — date-based comparisons now respect user-configured timezone (`KeyUserTimezone`), defaulting to UTC for backwards compatibility.
 
 ### References
 
