@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/edwinupegui/arsenal/internal/store"
+	"github.com/edwinupegui/arsenal/internal/today"
 	"github.com/edwinupegui/arsenal/internal/todos"
 )
 
@@ -45,7 +45,13 @@ func (h *Handlers) listTodos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Support due=today and due=upcoming shortcuts from the Today view.
-	now := time.Now().UTC()
+	loc, err := today.UserLocation(r.Context(), h.db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	now := h.now().In(loc)
+	todayStr := now.Format("2006-01-02")
 	switch q.Get("due") {
 	case "today":
 		filter.DueBefore = now.AddDate(0, 0, 1).Format("2006-01-02")
@@ -68,7 +74,7 @@ func (h *Handlers) listTodos(w http.ResponseWriter, r *http.Request) {
 			catName, catSlug = c.Name, c.Slug
 		}
 		vm := toTodoVM(t.Row, t.Tags, catName, catSlug)
-		vm.Overdue = isOverdue(vm.DueDate, vm.Status)
+		vm.Overdue = isOverdue(vm.DueDate, vm.Status, todayStr)
 		vms = append(vms, vm)
 	}
 	data := struct {
@@ -168,13 +174,19 @@ func (h *Handlers) showTodo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	loc, err := today.UserLocation(r.Context(), h.db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	todayStr := h.now().In(loc).Format("2006-01-02")
 	var catName, catSlug string
 	if todo.Row.CategoryID != nil {
 		c, _ := h.queries.GetCategory(r.Context(), *todo.Row.CategoryID)
 		catName, catSlug = c.Name, c.Slug
 	}
 	vm := toTodoVM(todo.Row, todo.Tags, catName, catSlug)
-	vm.Overdue = isOverdue(vm.DueDate, vm.Status)
+	vm.Overdue = isOverdue(vm.DueDate, vm.Status, todayStr)
 	data := struct {
 		pageData
 		Todo todoVM
@@ -347,13 +359,19 @@ func (h *Handlers) renderTodoCard(w http.ResponseWriter, r *http.Request, id int
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	loc, err := today.UserLocation(r.Context(), h.db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	todayStr := h.now().In(loc).Format("2006-01-02")
 	var catName, catSlug string
 	if todo.Row.CategoryID != nil {
 		c, _ := h.queries.GetCategory(r.Context(), *todo.Row.CategoryID)
 		catName, catSlug = c.Name, c.Slug
 	}
 	vm := toTodoVM(todo.Row, todo.Tags, catName, catSlug)
-	vm.Overdue = isOverdue(vm.DueDate, vm.Status)
+	vm.Overdue = isOverdue(vm.DueDate, vm.Status, todayStr)
 	w.Header().Set("Content-Type", "text/html")
 	t := pages["todos"]
 	_ = t.ExecuteTemplate(w, "todo-card", vm)
@@ -408,8 +426,8 @@ func todoFormFromRequest(r *http.Request) todoFormVM {
 	}
 }
 
-func isOverdue(dueDate, status string) bool {
-	return status == "open" && dueDate != "" && dueDate < time.Now().UTC().Format("2006-01-02")
+func isOverdue(dueDate, status, todayStr string) bool {
+	return status == "open" && dueDate != "" && dueDate < todayStr
 }
 
 func strPtr(s string) *string {

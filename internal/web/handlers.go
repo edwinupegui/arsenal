@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -26,6 +27,7 @@ type Handlers struct {
 	service      *resources.Service
 	todoService  *todos.Service
 	todayService *today.Service
+	now          func() time.Time
 }
 
 func newHandlers(db *sql.DB) *Handlers {
@@ -38,6 +40,7 @@ func newHandlers(db *sql.DB) *Handlers {
 		service:      resources.New(db),
 		todoService:  todos.New(db),
 		todayService: todaySvc,
+		now:          time.Now,
 	}
 }
 
@@ -54,7 +57,7 @@ func (h *Handlers) commonPage(r *http.Request, title, nav string) pageData {
 	if open, err := h.queries.CountOpenTodos(r.Context()); err == nil {
 		pd.TodoCounts.Open = open
 	}
-	if overdue, err := countOverdueTodos(r.Context(), h.db); err == nil {
+	if overdue, err := countOverdueTodos(r.Context(), h.db, h.now()); err == nil {
 		pd.TodoCounts.Overdue = overdue
 	}
 	pd.Sidebar = h.buildSidebar(r)
@@ -621,10 +624,16 @@ func countTrashed(ctx context.Context, db *sql.DB) (int64, error) {
 	return n, err
 }
 
-func countOverdueTodos(ctx context.Context, db *sql.DB) (int64, error) {
+func countOverdueTodos(ctx context.Context, db *sql.DB, now time.Time) (int64, error) {
+	loc, err := today.UserLocation(ctx, db)
+	if err != nil {
+		return 0, fmt.Errorf("user location: %w", err)
+	}
+	todayStr := now.In(loc).Format("2006-01-02")
 	var n int64
-	err := db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM todos WHERE status = 'open' AND deleted_at IS NULL AND due_date < date('now')`,
+	err = db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM todos WHERE status = 'open' AND deleted_at IS NULL AND due_date < ?`,
+		todayStr,
 	).Scan(&n)
 	return n, err
 }

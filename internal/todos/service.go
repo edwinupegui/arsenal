@@ -10,6 +10,7 @@ import (
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/sqliteutil"
 	"github.com/edwinupegui/arsenal/internal/store"
+	todayPkg "github.com/edwinupegui/arsenal/internal/today"
 )
 
 // Todo is the service-layer view of a stored todo together with its resolved tags.
@@ -20,13 +21,27 @@ type Todo struct {
 
 // Service exposes todo lifecycle operations.
 type Service struct {
-	db *sql.DB
-	q  *store.Queries
+	db  *sql.DB
+	q   *store.Queries
+	now func() time.Time
+}
+
+// Option configures a Service.
+type Option func(*Service)
+
+// WithClock replaces the default time.Now source. Used by tests to pin the
+// wall-clock for timezone-sensitive comparisons.
+func WithClock(now func() time.Time) Option {
+	return func(s *Service) { s.now = now }
 }
 
 // New builds a Service bound to db.
-func New(db *sql.DB) *Service {
-	return &Service{db: db, q: store.New(db)}
+func New(db *sql.DB, opts ...Option) *Service {
+	s := &Service{db: db, q: store.New(db), now: time.Now}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // Create validates input, opens a transaction, inserts the todo, upserts and
@@ -206,7 +221,11 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]*Todo, error) {
 
 	var today string
 	if f.OnlyOverdue {
-		today = time.Now().UTC().Format("2006-01-02")
+		loc, err := todayPkg.UserLocation(ctx, s.db)
+		if err != nil {
+			return nil, fmt.Errorf("user location: %w", err)
+		}
+		today = s.now().In(loc).Format("2006-01-02")
 	}
 	rows, err := s.q.ListTodosFiltered(ctx, store.TodoListFilter{
 		CategorySlug: f.CategorySlug,
