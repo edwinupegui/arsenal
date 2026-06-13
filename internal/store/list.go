@@ -148,6 +148,119 @@ type ListedTodo struct {
 	Tags         []string
 }
 
+// FinanceListFilter drives the dynamic listing query for finance transactions.
+type FinanceListFilter struct {
+	From         *string // ISO date lower bound (inclusive)
+	To           *string // ISO date upper bound (inclusive)
+	Kind         *string // exact match
+	CategorySlug string  // empty = no filter
+	TagName      string  // empty = no filter
+	Trashed      bool
+	Limit        int
+	Offset       int
+}
+
+// ListedFinance bundles a finance transaction row with its resolved category
+// name/slug and tag list.
+type ListedFinance struct {
+	Finance      FinanceTransaction
+	CategoryName sql.NullString
+	CategorySlug sql.NullString
+	Tags         []string
+}
+
+// ListFinanceFiltered runs a dynamic SQL query against the destination DB using
+// filter. Tags are aggregated in-query via GROUP_CONCAT.
+func (q *Queries) ListFinanceFiltered(ctx context.Context, filter FinanceListFilter) ([]ListedFinance, error) {
+	const base = `
+SELECT f.id, f.date, f.amount, f.kind, f.account, f.category_id,
+       f.notes, f.recurrence, f.currency, f.created_at, f.updated_at, f.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM finance_tags ft
+         JOIN tags tag ON tag.id = ft.tag_id
+         WHERE ft.finance_id = f.id
+       ) AS tag_csv
+FROM finance_transactions f
+LEFT JOIN categories c ON c.id = f.category_id`
+
+	conds := []string{}
+	args := []any{}
+
+	if filter.Trashed {
+		conds = append(conds, "f.deleted_at IS NOT NULL")
+	} else {
+		conds = append(conds, "f.deleted_at IS NULL")
+	}
+	if filter.From != nil && *filter.From != "" {
+		conds = append(conds, "f.date >= ?")
+		args = append(args, *filter.From)
+	}
+	if filter.To != nil && *filter.To != "" {
+		conds = append(conds, "f.date <= ?")
+		args = append(args, *filter.To)
+	}
+	if filter.Kind != nil && *filter.Kind != "" {
+		conds = append(conds, "f.kind = ?")
+		args = append(args, *filter.Kind)
+	}
+	if filter.CategorySlug != "" {
+		conds = append(conds, "c.slug = ? COLLATE NOCASE")
+		args = append(args, filter.CategorySlug)
+	}
+	if filter.TagName != "" {
+		conds = append(conds, `EXISTS (
+			SELECT 1 FROM finance_tags ft
+			JOIN tags tg ON tg.id = ft.tag_id
+			WHERE ft.finance_id = f.id AND tg.name = ? COLLATE NOCASE
+		)`)
+		args = append(args, filter.TagName)
+	}
+
+	q1 := base
+	if len(conds) > 0 {
+		q1 += "\nWHERE " + strings.Join(conds, " AND ")
+	}
+	q1 += "\nORDER BY f.date DESC, f.created_at DESC, f.id DESC"
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	q1 += fmt.Sprintf("\nLIMIT %d", limit)
+	if filter.Offset > 0 {
+		q1 += fmt.Sprintf(" OFFSET %d", filter.Offset)
+	}
+
+	rows, err := q.db.QueryContext(ctx, q1, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list finance: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedFinance
+	for rows.Next() {
+		var lf ListedFinance
+		var tagCSV string
+		if err := rows.Scan(
+			&lf.Finance.ID, &lf.Finance.Date, &lf.Finance.Amount, &lf.Finance.Kind,
+			&lf.Finance.Account, &lf.Finance.CategoryID, &lf.Finance.Notes,
+			&lf.Finance.Recurrence, &lf.Finance.Currency, &lf.Finance.CreatedAt,
+			&lf.Finance.UpdatedAt, &lf.Finance.DeletedAt,
+			&lf.CategoryName, &lf.CategorySlug,
+			&tagCSV,
+		); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+		if tagCSV != "" {
+			lf.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lf)
+	}
+	return out, rows.Err()
+}
+
 // ListTodosFiltered runs a dynamic SQL query against the destination DB using
 // filter. Tags are aggregated in-query via GROUP_CONCAT.
 func (q *Queries) ListTodosFiltered(ctx context.Context, filter TodoListFilter) ([]ListedTodo, error) {

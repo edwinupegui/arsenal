@@ -30,3 +30,15 @@ sql:
             go_type:
               import: "database/sql"
               type: "NullInt64"
+          - column: "finance_transactions.deleted_at"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "finance_transactions.notes"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "finance_transactions.category_id"
+            go_type:
+              import: "database/sql"
+              type: "NullInt64"

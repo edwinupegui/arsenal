@@ -144,6 +144,65 @@ LIMIT ?`
 	return out, nil
 }
 
+// SearchFinance runs a full-text search over notes and account using FTS5
+// and returns results enriched with category info and aggregated tags,
+// matching the shape produced by ListFinanceFiltered. Soft-deleted
+// transactions are excluded.
+func (q *Queries) SearchFinance(ctx context.Context, query string, limit int64) ([]ListedFinance, error) {
+	match := buildFTSQuery(query)
+	if match == "" {
+		return []ListedFinance{}, nil
+	}
+
+	const stmt = `
+SELECT f.id, f.date, f.amount, f.kind, f.account, f.category_id,
+       f.notes, f.recurrence, f.currency, f.created_at, f.updated_at, f.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM finance_tags ft
+         JOIN tags tag ON tag.id = ft.tag_id
+         WHERE ft.finance_id = f.id
+       ) AS tag_csv
+FROM finance_fts ft
+JOIN finance_transactions f ON f.id = ft.rowid
+LEFT JOIN categories c ON c.id = f.category_id
+WHERE finance_fts MATCH ?
+  AND f.deleted_at IS NULL
+ORDER BY rank
+LIMIT ?`
+
+	rows, err := q.db.QueryContext(ctx, stmt, match, limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedFinance
+	for rows.Next() {
+		var lf ListedFinance
+		var tagCSV string
+		if err := rows.Scan(
+			&lf.Finance.ID, &lf.Finance.Date, &lf.Finance.Amount, &lf.Finance.Kind,
+			&lf.Finance.Account, &lf.Finance.CategoryID, &lf.Finance.Notes,
+			&lf.Finance.Recurrence, &lf.Finance.Currency, &lf.Finance.CreatedAt,
+			&lf.Finance.UpdatedAt, &lf.Finance.DeletedAt,
+			&lf.CategoryName, &lf.CategorySlug,
+			&tagCSV,
+		); err != nil {
+			return nil, fmt.Errorf("fts scan: %w", err)
+		}
+		if tagCSV != "" {
+			lf.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lf)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("fts iterate: %w", err)
+	}
+	return out, nil
+}
+
 func stripFTSSpecials(s string) string {
 	const specials = `"'()*:^-+`
 	return strings.Map(func(r rune) rune {

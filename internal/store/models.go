@@ -22,6 +22,31 @@ type Category struct {
 	SortOrder int64  `json:"sort_order"`
 }
 
+type FinanceFt struct {
+	Notes   string `json:"notes"`
+	Account string `json:"account"`
+}
+
+type FinanceTag struct {
+	FinanceID int64 `json:"finance_id"`
+	TagID     int64 `json:"tag_id"`
+}
+
+type FinanceTransaction struct {
+	ID         int64          `json:"id"`
+	Date       string         `json:"date"`
+	Amount     float64        `json:"amount"`
+	Kind       string         `json:"kind"`
+	Account    string         `json:"account"`
+	CategoryID sql.NullInt64  `json:"category_id"`
+	Notes      sql.NullString `json:"notes"`
+	Recurrence string         `json:"recurrence"`
+	Currency   string         `json:"currency"`
+	CreatedAt  string         `json:"created_at"`
+	UpdatedAt  string         `json:"updated_at"`
+	DeletedAt  sql.NullString `json:"deleted_at"`
+}
+
 type Resource struct {
 	ID          int64          `json:"id"`
 	Title       string         `json:"title"`
