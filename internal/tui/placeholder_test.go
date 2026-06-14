@@ -14,10 +14,15 @@ func TestPlaceholderToday(t *testing.T) {
 }
 
 func TestPlaceholderFinance(t *testing.T) {
-	app := App{currentArea: areaFinance, width: 80, height: 24}
+	// Finance is now a real sub-model — the placeholder must NOT appear.
+	app := App{currentArea: areaFinance, width: 80, height: 24, keys: defaultKeys()}
 	view := app.View()
-	if !strings.Contains(view, "Finance (coming soon — v3.x)") {
-		t.Errorf("Finance placeholder not found in view:\n%s", view)
+	if strings.Contains(view, "coming soon") {
+		t.Errorf("Finance placeholder should be gone but was found in view:\n%s", view)
+	}
+	// The finance list header or status line must appear instead.
+	if !strings.Contains(view, "Finance") {
+		t.Errorf("Finance area label not found in view:\n%s", view)
 	}
 }
 

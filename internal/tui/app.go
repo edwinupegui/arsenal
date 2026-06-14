@@ -16,6 +16,7 @@ import (
 
 	"github.com/edwinupegui/arsenal/internal/config"
 	"github.com/edwinupegui/arsenal/internal/configstore"
+	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
 	"github.com/edwinupegui/arsenal/internal/today"
@@ -95,6 +96,14 @@ type App struct {
 	todoShowTrashed  bool
 	todoState        todoViewState
 	todoMutated      todoMutatedMsg
+
+	// Finance area state
+	financeService     *finance.Service
+	financeList        list.Model
+	financeDetail      financeDetailModel
+	financeConfirm     confirmModel
+	financeShowTrashed bool
+	financeState       financeViewState
 }
 
 type todoViewState int
@@ -153,6 +162,13 @@ func New(db *sql.DB) App {
 	todoSearch.Prompt = "/ "
 	todoSearch.CharLimit = 200
 
+	financeList := list.New(nil, delegate, 0, 0)
+	financeList.Title = "Finance"
+	financeList.SetShowStatusBar(true)
+	financeList.SetFilteringEnabled(true)
+	financeList.SetShowHelp(true)
+	financeList.Styles.Title = titleStyle
+
 	initialArea := areaToday
 	if db != nil {
 		cs := configstore.New(db)
@@ -189,6 +205,10 @@ func New(db *sql.DB) App {
 		todoDetail:   newTodoDetailModel(),
 		todoSearchIn: todoSearch,
 		newTodoForm:  newNewTodoFormModel(),
+		// Finance area initialized here
+		financeService: finance.New(db),
+		financeList:    financeList,
+		financeDetail:  newFinanceDetailModel(),
 	}
 }
 
@@ -221,6 +241,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.detail.SetSize(msg.Width, listH)
 		a.todoList.SetSize(msg.Width, listH)
 		a.todoDetail.SetSize(msg.Width, listH)
+		a.financeList.SetSize(msg.Width, listH)
+		a.financeDetail.SetSize(msg.Width, listH)
 		return a, nil
 
 	case resourcesLoadedMsg:
@@ -295,6 +317,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.updateToday(msg)
 	case areaTodos:
 		return a.updateTodos(msg)
+	case areaFinance:
+		return a.updateFinance(msg)
 	case areaResources:
 		switch a.state {
 		case viewDetail:
@@ -440,7 +464,7 @@ func (a App) View() string {
 	case areaToday:
 		body = a.viewToday()
 	case areaFinance:
-		body = placeholderView("Finance (coming soon — v3.x)", a.width, a.height)
+		body = a.viewFinance()
 	case areaCalendar:
 		body = placeholderView("Calendar (coming soon — v3.x)", a.width, a.height)
 	case areaTodos:
@@ -518,7 +542,8 @@ func (a App) statusLine() string {
 		keyStyle.Render("shift+tab") + " prev",
 		keyStyle.Render("1-5") + " jump",
 	}
-	if a.currentArea == areaToday {
+	switch a.currentArea {
+	case areaToday:
 		if a.todayState == todayStateNewForm {
 			parts = append(parts,
 				keyStyle.Render("enter")+" save",
@@ -526,6 +551,19 @@ func (a App) statusLine() string {
 			)
 		} else {
 			parts = append(parts, keyStyle.Render("r")+" refresh", keyStyle.Render("n")+" new")
+		}
+	case areaFinance:
+		parts = append(parts,
+			keyStyle.Render("n")+" new",
+			keyStyle.Render("e")+" edit",
+			keyStyle.Render("d")+" del",
+			keyStyle.Render("Tab")+" switch",
+		)
+		if a.financeShowTrashed {
+			parts = append(parts,
+				keyStyle.Render("r")+" restore",
+				keyStyle.Render("x")+" purge",
+			)
 		}
 	}
 	return mutedStyle.Render(strings.Join(parts, "  "))
@@ -549,6 +587,8 @@ func (a App) loadCurrentAreaCmd() tea.Cmd {
 		return loadResourcesCmd(a.queries, a.showTrashed)
 	case areaTodos:
 		return loadTodosCmd(a.todosService, a.todoShowTrashed, a.todoSearchActive)
+	case areaFinance:
+		return loadFinanceCmd(a.financeService, a.financeShowTrashed)
 	default:
 		return nil
 	}
