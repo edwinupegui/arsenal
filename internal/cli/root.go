@@ -70,6 +70,7 @@ func Execute(fsys embed.FS) error {
 	root.AddCommand(newTodoCmd())
 	root.AddCommand(newTodayCmd())
 	root.AddCommand(newFinanceCmd())
+	root.AddCommand(newCalendarCmd())
 
 	wireCompletions(root)
 

@@ -82,6 +82,25 @@ func wireCompletions(root *cobra.Command) {
 		_ = c.RegisterFlagCompletionFunc("kind", completeFinanceKinds)
 		_ = c.RegisterFlagCompletionFunc("recurrence", completeRecurrences)
 	}
+
+	// Calendar subcommand completions.
+	for _, name := range []string{"show", "rm", "restore", "edit", "purge"} {
+		if c, _, err := root.Find([]string{"calendar", name}); err == nil {
+			c.ValidArgsFunction = completeCalendarIDs
+		}
+	}
+	for _, name := range []string{"add", "list", "export"} {
+		c, _, err := root.Find([]string{"calendar", name})
+		if err != nil {
+			continue
+		}
+		_ = c.RegisterFlagCompletionFunc("cat", completeCategorySlugs)
+		_ = c.RegisterFlagCompletionFunc("tag", completeTagNames)
+		_ = c.RegisterFlagCompletionFunc("recurrence", completeCalendarRecurrences)
+	}
+	if c, _, err := root.Find([]string{"calendar", "export"}); err == nil {
+		_ = c.RegisterFlagCompletionFunc("format", completeCalendarFormats)
+	}
 }
 
 // completeFinanceIDs returns recent transaction IDs paired with account preview.
@@ -227,6 +246,38 @@ func completeStatuses(_ *cobra.Command, _ []string, _ string) ([]string, cobra.S
 // completeRecurrences is the static recurrence enum.
 func completeRecurrences(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return []string{"none", "daily", "weekly", "monthly"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeCalendarIDs returns recent calendar event IDs paired with title preview.
+func completeCalendarIDs(cmd *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	app, err := initApp(cmd.Context())
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	defer app.DB.Close()
+
+	items, err := app.Queries.ListCalendarFiltered(cmd.Context(), store.CalendarListFilter{Limit: 200})
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	out := make([]string, 0, len(items))
+	for _, ev := range items {
+		out = append(out, fmt.Sprintf("%d\t%s", ev.Calendar.ID, truncateForCompletion(ev.Calendar.Title, 50)))
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeCalendarRecurrences is the static calendar recurrence enum (includes yearly).
+func completeCalendarRecurrences(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"none", "daily", "weekly", "monthly", "yearly"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeCalendarFormats is the static export format enum for calendar.
+func completeCalendarFormats(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"ical"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 // truncateForCompletion shrinks long titles so the description column in
