@@ -140,42 +140,42 @@ Chain strategy: pending
 
 ## Phase 8: Web + Provider + Today Integration
 
-- [ ] 8.1 RED: Write `internal/today/providers/calendar_test.go` (~150 LOC) — seed events, `WithCalendarClock`: "events-today" includes timed event today, includes all-day event today, excludes other days, excludes soft-deleted, omitted when empty; "events-upcoming" includes today+1..today+7 events, boundary today+7 included, excluded beyond today+7, omitted when empty; item mapping (Domain, Title, Subtitle timed range, Subtitle all-day, Subtitle no-end, Subtitle + location, URL); timezone `UserLocation` respected; UTC fallback on invalid tz; error degrades gracefully.
+- [x] 8.1 RED: Write `internal/today/providers/calendar_test.go` (~150 LOC) — seed events, `WithCalendarClock`: "events-today" includes timed event today, includes all-day event today, excludes other days, excludes soft-deleted, omitted when empty; "events-upcoming" includes today+1..today+7 events, boundary today+7 included, excluded beyond today+7, omitted when empty; item mapping (Domain, Title, Subtitle timed range, Subtitle all-day, Subtitle no-end, Subtitle + location, URL); timezone `UserLocation` respected; UTC fallback on invalid tz; error degrades gracefully.
   - Files: `internal/today/providers/calendar_test.go` (NEW ~150 LOC)
   - Depends: 3.3
   - Acceptance: `go test ./internal/today/providers/... -run TestCalendar` FAILS (provider not yet written). Covers: calendar-provider (all 14 scenarios), today-providers (REQ-TP-08 all 9 scenarios).
 
-- [ ] 8.2 GREEN: Create `internal/today/providers/calendar.go` (~130 LOC) — `CalendarProvider{queries, db, now}`; `WithCalendarClock(now func() time.Time) CalendarProviderOption`; `NewCalendarProvider(db *sql.DB, opts ...) *CalendarProvider`; `Name() = "calendar"`; `Sections(ctx)` — `today.UserLocation(ctx,db)`; compute `dayStart`, `dayEnd`, `weekEnd`; query `ListEventsToday` + `ListEventsUpcoming`; `mapCalendarItem` (subtitle: all-day→"All day", timed→"HH:MM–HH:MM"/"HH:MM", append " · location"); append sections only when non-empty; return error to Registry.
+- [x] 8.2 GREEN: Create `internal/today/providers/calendar.go` (~130 LOC) — `CalendarProvider{queries, db, now}`; `WithCalendarClock(now func() time.Time) CalendarProviderOption`; `NewCalendarProvider(db *sql.DB, opts ...) *CalendarProvider`; `Name() = "calendar"`; `Sections(ctx)` — `today.UserLocation(ctx,db)`; compute `dayStart`, `dayEnd`, `weekEnd`; query `ListEventsToday` + `ListEventsUpcoming`; `mapCalendarItem` (subtitle: all-day→"All day", timed→"HH:MM–HH:MM"/"HH:MM", append " · location"); append sections only when non-empty; return error to Registry.
   - Files: `internal/today/providers/calendar.go` (NEW ~130 LOC)
   - Depends: 8.1, 2.2
   - Acceptance: `go test ./internal/today/providers/... -race -count=1` PASSES. Covers: calendar-provider, today-providers REQ-TP-08.
 
-- [ ] 8.3 Wire provider + extend Today ordering — extend `sectionOrder` in `internal/today/sections.go`: add `"events-today": 7`, `"events-upcoming": 8`. Extend `showAllURLFor` in `internal/today/today.go`: add `"events-today"` → `"/calendar?when=today"` and `"events-upcoming"` → `"/calendar?when=upcoming"`.
+- [x] 8.3 Wire provider + extend Today ordering — extend `sectionOrder` in `internal/today/sections.go`: add `"events-today": 7`, `"events-upcoming": 8`. Extend `showAllURLFor` in `internal/today/today.go`: add `"events-today"` → `"/calendar?when=today"` and `"events-upcoming"` → `"/calendar?when=upcoming"`.
   - Files: `internal/today/sections.go` (MOD +4 LOC), `internal/today/today.go` (MOD +4 LOC)
   - Depends: 8.2
   - Acceptance: Today view renders calendar sections after finance sections; empty calendar sections omitted; "show all →" links point to `/calendar?when=today|upcoming`. Covers: today-view (all 7 scenarios: REQ-TV-03, REQ-TV-09).
 
-- [ ] 8.4 Create `internal/web/calendar.go` (~430 LOC) — 9 handlers: `listCalendar` (filter: `?from`, `?to`, `?when=today|upcoming`, recurrence, cat, tag, trashed), `newCalendarForm`, `createCalendar` (compose `start_at`/`end_at` from date+time inputs, all_day from checkbox), `showCalendar` (404 on missing), `editCalendarForm`, `updateCalendar`, `softDeleteCalendar` (HTMX empty fragment), `restoreCalendar` (HTMX card), `purgeCalendar` (redirect). Add `calendarVM` to `internal/web/viewmodel.go` (+30 LOC). Add `calendarService *calendar.Service` to `Handlers` struct. Register routes `h.calendarRoutes(r)` in `internal/web/server.go` after `h.financeRoutes(r)`.
+- [x] 8.4 Create `internal/web/calendar.go` (~430 LOC) — 9 handlers: `listCalendar` (filter: `?from`, `?to`, `?when=today|upcoming`, recurrence, cat, tag, trashed), `newCalendarForm`, `createCalendar` (compose `start_at`/`end_at` from date+time inputs, all_day from checkbox), `showCalendar` (404 on missing), `editCalendarForm`, `updateCalendar`, `softDeleteCalendar` (HTMX empty fragment), `restoreCalendar` (HTMX card), `purgeCalendar` (redirect). Add `calendarVM` to `internal/web/viewmodel.go` (+30 LOC). Add `calendarService *calendar.Service` to `Handlers` struct. Register routes `h.calendarRoutes(r)` in `internal/web/server.go` after `h.financeRoutes(r)`.
   - Files: `internal/web/calendar.go` (NEW ~430 LOC), `internal/web/viewmodel.go` (MOD +30), `internal/web/server.go` (MOD +3), `internal/web/handlers.go` (MOD ~+20)
   - Depends: 3.3, 4.2
   - Acceptance: All 9 routes return correct status codes; HTMX fragments swap; all-day form accepted; 404 on unknown ID. Covers: calendar-web (list/create/detail/edit/lifecycle route scenarios).
 
-- [ ] 8.5 Create `internal/web/templates/calendar.html` (~240 LOC) — list view (card-based, sorted by start_at, filter controls: date range, recurrence, tag, all-day toggle), show view (all fields; all-day shows date-only badge; timed shows time range; NULL end shown as "—"), create/edit form (title, description, start date + time, end date + time, all-day checkbox, location, category select, tags, recurrence select, notes), HTMX card fragment (soft-delete swap target), empty state ("No events — Add event" link).
+- [x] 8.5 Create `internal/web/templates/calendar.html` (~240 LOC) — list view (card-based, sorted by start_at, filter controls: date range, recurrence, tag, all-day toggle), show view (all fields; all-day shows date-only badge; timed shows time range; NULL end shown as "—"), create/edit form (title, description, start date + time, end date + time, all-day checkbox, location, category select, tags, recurrence select, notes), HTMX card fragment (soft-delete swap target), empty state ("No events — Add event" link).
   - Files: `internal/web/templates/calendar.html` (NEW ~240 LOC)
   - Depends: 8.4
   - Acceptance: List renders with filter controls; show renders all-day correctly; form accepts all-day; empty state shown on first visit; HTMX delete removes card. Covers: calendar-web (list, show, create all-day, empty state, HTMX scenarios).
 
-- [ ] 8.6 Extend `internal/web/templates/layout.html` — add "Calendar" sidebar link between "Finance" and "Trash" with `{{.CalendarCount}}` badge (hidden when 0); add `<a href="/calendar">Calendar</a>` to header nav. Extend `commonPage()` in `internal/web/handlers.go` — add `CalendarCount int64` computed via `CountCalendarEvents`; register `NewCalendarProvider(db)` in `newHandlers()` after finance registration.
+- [x] 8.6 Extend `internal/web/templates/layout.html` — add "Calendar" sidebar link between "Finance" and "Trash" with `{{.CalendarCount}}` badge (hidden when 0); add `<a href="/calendar">Calendar</a>` to header nav. Extend `commonPage()` in `internal/web/handlers.go` — add `CalendarCount int64` computed via `CountCalendarEvents`; register `NewCalendarProvider(db)` in `newHandlers()` after finance registration.
   - Files: `internal/web/templates/layout.html` (MOD +12 LOC), `internal/web/handlers.go` (MOD +8 LOC)
   - Depends: 8.4, 8.2
   - Acceptance: Sidebar shows "Calendar" between Finance and Trash; badge shows count when >0, hidden when 0; `CalendarCount` available on every page. Covers: calendar-web (sidebar badge, CalendarCount, positioning scenarios).
 
-- [ ] 8.7 Write `internal/web/calendar_test.go` (~110 LOC) — `httptest.NewServer` tests: GET /calendar returns 200 + event cards, POST /calendar creates + redirects, GET /calendar/{id} shows detail, POST /calendar/{id}/delete returns HTMX empty fragment, sidebar badge present, GET /calendar/9999 returns 404, all-day create round-trip.
+- [x] 8.7 Write `internal/web/calendar_test.go` (~110 LOC) — `httptest.NewServer` tests: GET /calendar returns 200 + event cards, POST /calendar creates + redirects, GET /calendar/{id} shows detail, POST /calendar/{id}/delete returns HTMX empty fragment, sidebar badge present, GET /calendar/9999 returns 404, all-day create round-trip.
   - Files: `internal/web/calendar_test.go` (NEW ~110 LOC)
   - Depends: 8.5, 8.6
   - Acceptance: `go test ./internal/web/... -race -count=1` PASSES. Covers: calendar-web (all 12 scenarios).
 
-- [ ] 8.8 Final integration verification — `go build ./...` clean; `go test ./... -race -count=1` all green; `go vet ./...` clean; `make sqlc` no drift. Verify Today view section ordering (calendar sections after finance); verify TUI placeholder gone; verify CLI `arsenal calendar` lists all subcommands.
+- [x] 8.8 Final integration verification — `go build ./...` clean; `go test ./... -race -count=1` all green; `go vet ./...` clean; `make sqlc` no drift. Verify Today view section ordering (calendar sections after finance); verify TUI placeholder gone; verify CLI `arsenal calendar` lists all subcommands.
   - Files: — (verification only)
   - Depends: 8.7, 7.3, 6.5
   - Acceptance: Zero build errors; zero test failures; zero regressions in resources/todos/finance/today.
