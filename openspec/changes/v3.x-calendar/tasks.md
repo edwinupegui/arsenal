@@ -123,18 +123,18 @@ Chain strategy: pending
 
 ## Phase 7: TUI
 
-- [ ] 7.1 Create `internal/tui/calendar.go` (~360 LOC) — `calendarItem` (list.Item: `Title()` = event title, `Description()` = formatted start_at + location + recurrence + tag count); `calendarDetailModel` (viewport, renders all fields including all_day indicator, time range or date-only); `calendarViewState` enum (List/Detail/Trash/ConfirmDelete); `updateCalendar()` dispatcher; `loadCalendarCmd()` (calls `svc.List(ctx, Filter{Limit:500})`); keybindings: `n` new, `e` edit, `d` soft-delete, `r` restore (in trash), `x` purge+confirm, `j`/`k` navigate, `enter` detail, `Tab` area switch.
+- [x] 7.1 Create `internal/tui/calendar.go` (~360 LOC) — `calendarItem` (list.Item: `Title()` = event title, `Description()` = formatted start_at + location + recurrence + tag count); `calendarDetailModel` (viewport, renders all fields including all_day indicator, time range or date-only); `calendarViewState` enum (List/Detail/Trash/ConfirmDelete); `updateCalendar()` dispatcher; `loadCalendarCmd()` (calls `svc.List(ctx, Filter{Limit:500})`); keybindings: `n` new, `e` edit, `d` soft-delete, `r` restore (in trash), `x` purge+confirm, `j`/`k` navigate, `enter` detail, `Tab` area switch.
   - Files: `internal/tui/calendar.go` (NEW ~360 LOC)
   - Depends: 3.3
   - Acceptance: Direct `Model.Update()` bubbletea teatest: `j`/`k` navigate; `enter` opens detail; `d` soft-deletes; `r` restores; `x` shows confirm; all-day detail shows "All day"; timed detail shows "HH:MM–HH:MM"; open-ended shows "—" for end; detail shows tags. Covers: calendar-tui (keybinding scenarios, detail view scenarios, list item formatting).
 
-- [ ] 7.2 Wire `areaCalendar` in `internal/tui/app.go` — add fields `calendarService *calendar.Service`, `calendarList list.Model`, `calendarDetail calendarDetailModel`, `calendarConfirm`, `calendarShowTrashed bool`, `calendarState calendarViewState`. In `View()` replace `placeholderView("Calendar (coming soon — v3.x)")` with `a.calendarView()`. In `Update()` add `case areaCalendar: return a.updateCalendar(msg)`. In `loadCurrentAreaCmd()` add `case areaCalendar: return loadCalendarCmd(...)`. Register `providers.NewCalendarProvider(db)` in `New()` after finance registration.
-  - Files: `internal/tui/app.go` (MOD ~+20 LOC)
+- [x] 7.2 Wire `areaCalendar` in `internal/tui/app.go` — add fields `calendarService *calendar.Service`, `calendarList list.Model`, `calendarDetail calendarDetailModel`, `calendarConfirm`, `calendarShowTrashed bool`, `calendarState calendarViewState`. In `View()` replace `placeholderView("Calendar (coming soon — v3.x)")` with `a.calendarView()`. In `Update()` add `case areaCalendar: return a.updateCalendar(msg)`. In `loadCurrentAreaCmd()` add `case areaCalendar: return loadCalendarCmd(...)`. Register `providers.NewCalendarProvider(db)` in `New()` after finance registration (deferred to Phase 8 — provider does not exist yet).
+  - Files: `internal/tui/app.go` (MOD ~+25 LOC)
   - Depends: 7.1
   - Acceptance: Placeholder message gone; `key 5` activates Calendar area; Tab cycles to Calendar; list renders events; calendar area shown in status bar with hints `n new · e edit · d del · Tab switch`. Covers: calendar-tui (placeholder gone, key 5, status bar hints).
 
-- [ ] 7.3 Extend `internal/tui/status.go` with Calendar area hints — `n new · e edit · d del · Tab switch` hint string for `areaCalendar`.
-  - Files: `internal/tui/status.go` (MOD ~+4 LOC)
+- [x] 7.3 Status bar Calendar hints wired inline in `app.go` `statusLine()` — `n new · e edit · d del · Tab switch` for `areaCalendar`. (No separate status.go file needed — mirrors how finance hints are in app.go statusLine.)
+  - Files: `internal/tui/app.go` (covered by 7.2 MOD)
   - Depends: 7.2
   - Acceptance: Status bar text matches spec when Calendar area active. Covers: calendar-tui (REQ: Status bar context hints).
 
