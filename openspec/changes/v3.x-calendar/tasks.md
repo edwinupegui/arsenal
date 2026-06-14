@@ -72,24 +72,24 @@ Chain strategy: pending
 
 ## Phase 4: iCal Writer
 
-- [ ] 4.1 RED: Write `internal/calendar/ical_test.go` — table-driven tests: VCALENDAR envelope (BEGIN/END/VERSION/PRODID), VEVENT required fields (UID, SUMMARY, DTSTART, DTSTAMP), DTSTART timed format `20260615T090000`, DTEND timed format, DTSTART;VALUE=DATE all-day `20260615`, DTEND;VALUE=DATE all-day, DTEND omitted when end_at empty, DESCRIPTION included/omitted, LOCATION included/omitted, RRULE per recurrence value (daily/weekly/monthly/yearly), no RRULE for `none`, empty export produces valid envelope, RFC 5545 text escaping (backslash, semicolon, comma, newline), line folding at 75 octets (CRLF + space), all lines end with CRLF, stdlib-only (no external dep).
+- [x] 4.1 RED: Write `internal/calendar/ical_test.go` — table-driven tests: VCALENDAR envelope (BEGIN/END/VERSION/PRODID), VEVENT required fields (UID, SUMMARY, DTSTART, DTSTAMP), DTSTART timed format `20260615T090000`, DTEND timed format, DTSTART;VALUE=DATE all-day `20260615`, DTEND;VALUE=DATE all-day, DTEND omitted when end_at empty, DESCRIPTION included/omitted, LOCATION included/omitted, RRULE per recurrence value (daily/weekly/monthly/yearly), no RRULE for `none`, empty export produces valid envelope, RFC 5545 text escaping (backslash, semicolon, comma, newline), line folding at 75 octets (CRLF + space), all lines end with CRLF, stdlib-only (no external dep).
   - Files: `internal/calendar/ical_test.go` (NEW ~200 LOC)
   - Depends: 3.1
   - Acceptance: `go test ./internal/calendar/... -run TestICal` FAILS (ical.go not yet written). Covers: calendar-ical-export (all 17 scenarios).
 
-- [ ] 4.2 GREEN: Create `internal/calendar/ical.go` (~150 LOC) — `WriteICal(w io.Writer, rows []ExportRow) error`; `formatICalDateTime(startAt string, allDay bool) string`; `mapRRULE(r Recurrence) string`; `escapeText(s string) string`; `foldLine(line string) string`. CRLF line endings. DTSTART;VALUE=DATE for all-day; floating local datetime for timed. DTSTAMP from `created_at`. RRULE mapping table. CATEGORIES from category + tags (escaped, comma-joined). Empty rows → valid empty VCALENDAR.
+- [x] 4.2 GREEN: Create `internal/calendar/ical.go` (~150 LOC) — `WriteICal(w io.Writer, rows []ExportRow) error`; `formatICalDateTime(startAt string, allDay bool) string`; `mapRRULE(r Recurrence) string`; `escapeText(s string) string`; `foldLine(line string) string`. CRLF line endings. DTSTART;VALUE=DATE for all-day; floating local datetime for timed. DTSTAMP from `created_at`. RRULE mapping table. CATEGORIES from category + tags (escaped, comma-joined). Empty rows → valid empty VCALENDAR.
   - Files: `internal/calendar/ical.go` (NEW ~150 LOC)
   - Depends: 4.1
   - Acceptance: `go test ./internal/calendar/... -race -count=1` PASSES including iCal tests. Covers: calendar-ical-export (all scenarios).
 
 ## Phase 5: Cross-Domain Tag Cleanup
 
-- [ ] 5.1 Extend `DeleteOrphanTags` UNION in `internal/store/queries/tags.sql` — add `UNION SELECT DISTINCT tag_id FROM calendar_tags`. Run `sqlc generate` to regenerate `tags.sql.go`.
+- [x] 5.1 Extend `DeleteOrphanTags` UNION in `internal/store/queries/tags.sql` — add `UNION SELECT DISTINCT tag_id FROM calendar_tags`. Run `sqlc generate` to regenerate `tags.sql.go`.
   - Files: `internal/store/queries/tags.sql` (MOD +2), `internal/store/tags.sql.go` (GEN)
   - Depends: 2.2
   - Acceptance: `sqlc generate` clean; `go build ./internal/store/...` clean. Covers: calendar-service (REQ: Attacher — orphan cleanup across 4 domains).
 
-- [ ] 5.2 Verify orphan cleanup in tests: add `Purge prunes calendar orphans; finance/todo/resource tags untouched` case to `service_test.go`. Run `go test ./... -race -count=1` — all green.
+- [x] 5.2 Verify orphan cleanup in tests: add `Purge prunes calendar orphans; finance/todo/resource tags untouched` case to `service_test.go`. Run `go test ./... -race -count=1` — all green.
   - Files: `internal/calendar/service_test.go` (MOD ~+30 LOC)
   - Depends: 5.1, 3.3
   - Acceptance: `go test ./... -race -count=1` PASSES; purge removes only calendar orphans. Covers: calendar-service (Purge hard-deletes row, cross-domain isolation).
