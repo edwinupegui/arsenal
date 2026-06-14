@@ -81,7 +81,7 @@ func (p *CalendarProvider) Sections(ctx context.Context) ([]today.Section, error
 		}
 		sections = append(sections, today.Section{
 			Key:     "events-today",
-			Title:   "Events Today",
+			Title:   "Today's Events",
 			Items:   items,
 			IsEmpty: false,
 		})

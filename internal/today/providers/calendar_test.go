@@ -366,6 +366,42 @@ func TestCalendarProvider_UTCFallbackOnInvalidTimezone(t *testing.T) {
 	}
 }
 
+// --- Section titles ---
+
+// TestCalendarProvider_SectionTitles asserts that section Title strings match
+// the spec exactly: "Today's Events" (events-today) and "Upcoming Events"
+// (events-upcoming). REQ-TP-08 / calendar-provider spec.
+func TestCalendarProvider_SectionTitles(t *testing.T) {
+	db := newCalendarTestDB(t)
+	now := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+
+	// Seed one event today and one tomorrow so both sections appear.
+	seedCalendarEvent(t, db, "Today event", "2026-06-15T09:00:00", "", false, "")
+	seedCalendarEvent(t, db, "Tomorrow event", "2026-06-16T09:00:00", "", false, "")
+
+	p := providers.NewCalendarProvider(db, providers.WithCalendarClock(pinClock(now)))
+	secs, err := p.Sections(context.Background())
+	if err != nil {
+		t.Fatalf("Sections: %v", err)
+	}
+
+	todaySec := findSection(secs, "events-today")
+	if todaySec == nil {
+		t.Fatalf("expected events-today section")
+	}
+	if todaySec.Title != "Today's Events" {
+		t.Errorf("events-today Title = %q, want \"Today's Events\"", todaySec.Title)
+	}
+
+	upSec := findSection(secs, "events-upcoming")
+	if upSec == nil {
+		t.Fatalf("expected events-upcoming section")
+	}
+	if upSec.Title != "Upcoming Events" {
+		t.Errorf("events-upcoming Title = %q, want \"Upcoming Events\"", upSec.Title)
+	}
+}
+
 // --- helpers ---
 
 func findSection(secs []today.Section, key string) *today.Section {

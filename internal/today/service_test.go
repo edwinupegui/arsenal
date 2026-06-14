@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 // mockProvider is a test double that returns configurable sections/errors.
@@ -159,6 +160,7 @@ func TestService_ShowAllURLSetOnOverflow(t *testing.T) {
 }
 
 func TestService_ShowAllURLMapping(t *testing.T) {
+	// Static-URL cases (no date dependency).
 	cases := []struct {
 		key  string
 		want string
@@ -184,6 +186,32 @@ func TestService_ShowAllURLMapping(t *testing.T) {
 		if secs[0].ShowAllURL != tc.want {
 			t.Errorf("%s: ShowAllURL = %q, want %q", tc.key, secs[0].ShowAllURL, tc.want)
 		}
+	}
+}
+
+// TestShowAllURLFor_CalendarEventsToday asserts REQ-TV-09: the events-today
+// show-all URL uses the from/to date-filter format so the link actually
+// filters the calendar list to today's events.
+func TestShowAllURLFor_CalendarEventsToday(t *testing.T) {
+	// Pin clock: 2026-06-15 in UTC.
+	pinned := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	got := showAllURLFor("events-today", pinned)
+	want := "/calendar?from=2026-06-15&to=2026-06-15"
+	if got != want {
+		t.Errorf("showAllURLFor(events-today) = %q, want %q", got, want)
+	}
+}
+
+// TestShowAllURLFor_CalendarEventsUpcoming asserts REQ-TV-09: the
+// events-upcoming show-all URL spans tomorrow through today+7.
+func TestShowAllURLFor_CalendarEventsUpcoming(t *testing.T) {
+	// Pin clock: 2026-06-15 in UTC.
+	pinned := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	got := showAllURLFor("events-upcoming", pinned)
+	// tomorrow = 2026-06-16, today+7 = 2026-06-22
+	want := "/calendar?from=2026-06-16&to=2026-06-22"
+	if got != want {
+		t.Errorf("showAllURLFor(events-upcoming) = %q, want %q", got, want)
 	}
 }
 

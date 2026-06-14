@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"sort"
+	"time"
 )
 
 const maxItemsPerSection = 5
@@ -55,6 +56,7 @@ func (s *Service) Build(ctx context.Context) ([]Section, []ProviderError) {
 		return false
 	})
 
+	now := time.Now()
 	var out []Section
 	for _, sec := range sections {
 		if len(sec.Items) == 0 || sec.IsEmpty {
@@ -62,14 +64,18 @@ func (s *Service) Build(ctx context.Context) ([]Section, []ProviderError) {
 		}
 		if len(sec.Items) > maxItemsPerSection {
 			sec.Items = sec.Items[:maxItemsPerSection]
-			sec.ShowAllURL = showAllURLFor(sec.Key)
+			sec.ShowAllURL = showAllURLFor(sec.Key, now)
 		}
 		out = append(out, sec)
 	}
 	return out, errs
 }
 
-func showAllURLFor(key string) string {
+// showAllURLFor returns the "show all" destination URL for a given section key.
+// For calendar sections the URL uses from/to date params (REQ-TV-09) so the
+// link actually filters the calendar list to the matching window. now is used
+// to compute today, tomorrow, and today+7 in UTC.
+func showAllURLFor(key string, now time.Time) string {
 	switch key {
 	case "overdue":
 		return "/todos?status=open&overdue=true"
@@ -84,9 +90,12 @@ func showAllURLFor(key string) string {
 	case "recent-transactions":
 		return "/finance"
 	case "events-today":
-		return "/calendar?when=today"
+		today := now.Format("2006-01-02")
+		return "/calendar?from=" + today + "&to=" + today
 	case "events-upcoming":
-		return "/calendar?when=upcoming"
+		tomorrow := now.AddDate(0, 0, 1).Format("2006-01-02")
+		todayPlus7 := now.AddDate(0, 0, 7).Format("2006-01-02")
+		return "/calendar?from=" + tomorrow + "&to=" + todayPlus7
 	default:
 		return ""
 	}
