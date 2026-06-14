@@ -96,27 +96,27 @@ Chain strategy: pending
 
 ## Phase 6: CLI
 
-- [ ] 6.1 Create `internal/cli/calendar.go` (~25 LOC) — `newCalendarCmd()` parent, help, subcommand registration. Create `internal/cli/calendar_add.go` (~110 LOC) — `add` subcommand, flags: `--title`, `--start`, `--end`, `--all-day`, `--location`, `--cat`, `--tag` (repeatable), `--description`, `--notes`, `--recurrence`. Normalizes `start_at`/`end_at` from `YYYY-MM-DDTHH:MM` to storage format; infers/validates `all_day`. `--json` flag.
+- [x] 6.1 Create `internal/cli/calendar.go` (~25 LOC) — `newCalendarCmd()` parent, help, subcommand registration. Create `internal/cli/calendar_add.go` (~110 LOC) — `add` subcommand, flags: `--title`, `--start`, `--end`, `--all-day`, `--location`, `--cat`, `--tag` (repeatable), `--description`, `--notes`, `--recurrence`. Normalizes `start_at`/`end_at` from `YYYY-MM-DDTHH:MM` to storage format; infers/validates `all_day`. `--json` flag.
   - Files: `internal/cli/calendar.go` (NEW ~25 LOC), `internal/cli/calendar_add.go` (NEW ~110 LOC)
   - Depends: 3.3
   - Acceptance: `arsenal calendar add` creates event; `--all-day` stores date-only; invalid recurrence exits non-zero; missing `--title` exits non-zero; missing `--start` exits non-zero. Covers: calendar-cli (add scenarios).
 
-- [ ] 6.2 Create `internal/cli/calendar_list.go` (~110 LOC) — `list` with flags `--from`, `--to`, `--all-day`, `--recurrence`, `--cat`, `--tag`, `--trashed`, `--json`. Create `internal/cli/calendar_show.go` (~80 LOC) — `show <id>` with all fields including all_day/location; non-existent exits non-zero. `--json` flag.
+- [x] 6.2 Create `internal/cli/calendar_list.go` (~110 LOC) — `list` with flags `--from`, `--to`, `--all-day`, `--recurrence`, `--cat`, `--tag`, `--trashed`, `--json`. Create `internal/cli/calendar_show.go` (~80 LOC) — `show <id>` with all fields including all_day/location; non-existent exits non-zero. `--json` flag.
   - Files: `internal/cli/calendar_list.go` (NEW ~110 LOC), `internal/cli/calendar_show.go` (NEW ~80 LOC)
   - Depends: 6.1
   - Acceptance: `list --from/--to` returns filtered events; `list --json` valid JSON array; `list --trashed` returns only deleted; `show` prints all fields; `show 9999` exits non-zero. Covers: calendar-cli (list, show scenarios).
 
-- [ ] 6.3 Create `internal/cli/calendar_edit.go` (~110 LOC) — `edit <id>` same flags as add. Create `internal/cli/calendar_rm_restore_purge.go` (~160 LOC) — `rm <id>` (soft-delete), `restore <id>`, `purge <id>` (requires `--yes` or TTY).
+- [x] 6.3 Create `internal/cli/calendar_edit.go` (~110 LOC) — `edit <id>` same flags as add. Create `internal/cli/calendar_rm_restore_purge.go` (~160 LOC) — `rm <id>` (soft-delete), `restore <id>`, `purge <id>` (requires `--yes` or TTY).
   - Files: `internal/cli/calendar_edit.go` (NEW ~110 LOC), `internal/cli/calendar_rm_restore_purge.go` (NEW ~160 LOC)
   - Depends: 6.2
   - Acceptance: `rm <id>` sets deleted_at, event absent from default list; `purge` without `--yes` on non-TTY exits non-zero with error. Covers: calendar-cli (edit, rm, restore, purge scenarios).
 
-- [ ] 6.4 Create `internal/cli/calendar_export.go` (~110 LOC) — `export --format ical` (only format in v3.x; `--format csv` exits with error); filter flags `--from`, `--to`, `--cat`, `--tag`; `--output path` writes file, stdout by default. Calls `Service.Export()` then `WriteICal()`. Register `newCalendarCmd()` in `internal/cli/root.go` (+3 lines) after `newFinanceCmd()`. Add completions in `internal/cli/completion.go` (+15 lines): recurrence values, `--format ical`, calendar subcommands.
+- [x] 6.4 Create `internal/cli/calendar_export.go` (~110 LOC) — `export --format ical` (only format in v3.x; `--format csv` exits with error); filter flags `--from`, `--to`, `--cat`, `--tag`; `--output path` writes file, stdout by default. Calls `Service.Export()` then `WriteICal()`. Register `newCalendarCmd()` in `internal/cli/root.go` (+3 lines) after `newFinanceCmd()`. Add completions in `internal/cli/completion.go` (+15 lines): recurrence values, `--format ical`, calendar subcommands.
   - Files: `internal/cli/calendar_export.go` (NEW ~110 LOC), `internal/cli/root.go` (MOD +3), `internal/cli/completion.go` (MOD +15)
   - Depends: 6.3, 4.2
   - Acceptance: `export --format ical` outputs `BEGIN:VCALENDAR`; `--output` writes to file, stdout silent; `--format csv` exits non-zero; date range filter works; empty export outputs valid envelope. Covers: calendar-cli (export scenarios), calendar-ical-export (output destination, filter, empty export).
 
-- [ ] 6.5 RED: Write `internal/cli/calendar_test.go` — `cmd.ExecuteContext` + capture stdout tests: help lists subcommands, add timed event, add all-day event, add missing title fails, add missing start fails, add invalid recurrence fails, list date range, list JSON, list trashed, show existing, show non-existent fails, purge non-TTY no-yes fails, rm soft-deletes, export stdout ical, export unsupported format fails, export --output file, tab-complete recurrence, tab-complete subcommands.
+- [x] 6.5 RED: Write `internal/cli/calendar_test.go` — `cmd.ExecuteContext` + capture stdout tests: help lists subcommands, add timed event, add all-day event, add missing title fails, add missing start fails, add invalid recurrence fails, list date range, list JSON, list trashed, show existing, show non-existent fails, purge non-TTY no-yes fails, rm soft-deletes, export stdout ical, export unsupported format fails, export --output file, tab-complete recurrence, tab-complete subcommands.
   - Files: `internal/cli/calendar_test.go` (NEW ~280 LOC)
   - Depends: 6.4
   - Acceptance: `go test ./internal/cli/... -race -count=1` PASSES. Covers: calendar-cli (all 16 scenarios), calendar-ical-export (stdout/file/filter/empty scenarios via CLI).
