@@ -1,7 +1,7 @@
 # CONTINUE — Arsenal v3 Resume Guide
 
-> **Read this when resuming work on Arsenal.** Last updated: 2026-06-14 (finance session).
-> TL;DR: v3.0.0 shipped all 3 surfaces (TUI, web, CLI). The **v3.x Finance domain is now implemented end-to-end** across all 4 surfaces (service, CLI, TUI, web) plus the Today view, all green with `-race`. The next deferred domain is **Calendar** (ADR-0002).
+> **Read this when resuming work on Arsenal.** Last updated: 2026-06-14 (calendar session).
+> TL;DR: v3.0.0 shipped all 3 surfaces (TUI, web, CLI). Both deferred v3.x domains — **Finance** and **Calendar** — are now implemented end-to-end across all 4 surfaces (service, CLI, TUI, web) plus the Today view, all green with `-race`. With Calendar done, **all five TUI areas are functional** and the v3.x domain backlog from ADR-0002 is complete.
 
 ---
 
@@ -12,8 +12,9 @@
 - **Working tree clean**. Nothing uncommitted.
 - **4 v3.0.1 backlog items done** in this session: TUI n-key form, timezone ADR, ShowAllURL provider relaxation, DueAfter in ListFilter.
 - **Only one follow-up remains**: implement the timezone changes per ADR-0003 (~50 LOC, 4 call sites, 6 tests). The decision is documented; the code is a separate task.
-- **v3.x Finance — DONE**: `internal/finance/` service, `arsenal finance` CLI (incl. CSV export), TUI `areaFinance`, web `/finance` routes + sidebar badge, and `FinanceProvider` wired into the Today view. Migration `20260613000000_finance.sql`. See `openspec/changes/v3.x-finance/`.
-- **v3.x Calendar — deferred** (per ADR-0002): Calendar domain + CalendarProvider. Plugs into the Today Provider registry without registry changes, the same way Finance did.
+- **v3.x Finance — DONE**: `internal/finance/` service, `arsenal finance` CLI (incl. CSV export), TUI `areaFinance`, web `/finance` routes + sidebar badge, and `FinanceProvider` wired into the Today view. Migration `20260613000000_finance.sql`. Archived in `openspec/changes/archive/2026-06-14-v3.x-finance/`.
+- **v3.x Calendar — DONE**: `internal/calendar/` service, `arsenal calendar` CLI (incl. iCal/RFC 5545 export), TUI `areaCalendar`, web `/calendar` routes + sidebar badge, and `CalendarProvider` (today's events + upcoming) wired into the Today view. Migration `20260614000000_calendar.sql`. See `openspec/changes/v3.x-calendar/`.
+- **Next**: no deferred v3.x domains remain from ADR-0002. Candidate follow-ups: recurrence expansion (todos/finance/calendar share a metadata-only `recurrence` enum with no scheduler), and the `Calendar` web `?when=today|upcoming` filter is currently a display hint (no separate server-side predicate).
 
 ---
 
