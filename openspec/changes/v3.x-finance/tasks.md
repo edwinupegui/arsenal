@@ -95,12 +95,12 @@ Chain strategy: pending
 
 ## Phase 6: TUI
 
-- [ ] 6.1 Create `internal/tui/finance.go` (~340 LOC) — `financeItem` (list.Item), `financeDetailModel` (viewport), state machine (`financeStateList/Detail/Trash/ConfirmDelete`), `updateFinance()` dispatcher, `loadFinanceCmd()`, keybindings (n/e/d/r/x/j/k/enter/Tab), status bar hints.
+- [x] 6.1 Create `internal/tui/finance.go` (~340 LOC) — `financeItem` (list.Item), `financeDetailModel` (viewport), state machine (`financeStateList/Detail/Trash/ConfirmDelete`), `updateFinance()` dispatcher, `loadFinanceCmd()`, keybindings (n/e/d/r/x/j/k/enter/Tab), status bar hints.
   - Files: `internal/tui/finance.go` (NEW ~340 LOC)
   - Depends: 3.3
   - Acceptance: Direct `Model.Update()` tests for keybindings pass. Specs: finance-tui (keybindings, detail).
 
-- [ ] 6.2 Wire `areaFinance` in `internal/tui/app.go`: replace `placeholderView("Finance…")` in `View()` (~line 442), add `case areaFinance: return a.updateFinance(msg)` in `Update()` (~line 308), add `case areaFinance: return loadFinanceCmd(…)` in `loadCurrentAreaCmd()` (~line 551). Status bar shows "Finance" + hints.
+- [x] 6.2 Wire `areaFinance` in `internal/tui/app.go`: replace `placeholderView("Finance…")` in `View()` (~line 442), add `case areaFinance: return a.updateFinance(msg)` in `Update()` (~line 308), add `case areaFinance: return loadFinanceCmd(…)` in `loadCurrentAreaCmd()` (~line 551). Status bar shows "Finance" + hints.
   - Files: `internal/tui/app.go` (MOD +15)
   - Depends: 6.1
   - Acceptance: Placeholder gone; Tab cycles to Finance; list renders; `j/k` navigate; `enter` opens detail. Specs: finance-tui (all 6 scenarios).
