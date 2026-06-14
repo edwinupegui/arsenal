@@ -27,9 +27,14 @@ func TestPlaceholderFinance(t *testing.T) {
 }
 
 func TestPlaceholderCalendar(t *testing.T) {
-	app := App{currentArea: areaCalendar, width: 80, height: 24}
+	// Calendar is now a real sub-model — the placeholder must NOT appear.
+	app := App{currentArea: areaCalendar, width: 80, height: 24, keys: defaultKeys()}
 	view := app.View()
-	if !strings.Contains(view, "Calendar (coming soon — v3.x)") {
-		t.Errorf("Calendar placeholder not found in view:\n%s", view)
+	if strings.Contains(view, "coming soon") {
+		t.Errorf("Calendar placeholder should be gone but was found in view:\n%s", view)
+	}
+	// The calendar list header or status line must appear instead.
+	if !strings.Contains(view, "Calendar") {
+		t.Errorf("Calendar area label not found in view:\n%s", view)
 	}
 }

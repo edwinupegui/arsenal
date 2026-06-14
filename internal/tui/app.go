@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/edwinupegui/arsenal/internal/calendar"
 	"github.com/edwinupegui/arsenal/internal/config"
 	"github.com/edwinupegui/arsenal/internal/configstore"
 	"github.com/edwinupegui/arsenal/internal/finance"
@@ -104,6 +105,14 @@ type App struct {
 	financeConfirm     confirmModel
 	financeShowTrashed bool
 	financeState       financeViewState
+
+	// Calendar area state
+	calendarService     *calendar.Service
+	calendarList        list.Model
+	calendarDetail      calendarDetailModel
+	calendarConfirm     confirmModel
+	calendarShowTrashed bool
+	calendarState       calendarViewState
 }
 
 type todoViewState int
@@ -169,6 +178,13 @@ func New(db *sql.DB) App {
 	financeList.SetShowHelp(true)
 	financeList.Styles.Title = titleStyle
 
+	calendarList := list.New(nil, delegate, 0, 0)
+	calendarList.Title = "Calendar"
+	calendarList.SetShowStatusBar(true)
+	calendarList.SetFilteringEnabled(true)
+	calendarList.SetShowHelp(true)
+	calendarList.Styles.Title = titleStyle
+
 	initialArea := areaToday
 	if db != nil {
 		cs := configstore.New(db)
@@ -209,6 +225,10 @@ func New(db *sql.DB) App {
 		financeService: finance.New(db),
 		financeList:    financeList,
 		financeDetail:  newFinanceDetailModel(),
+		// Calendar area initialized here
+		calendarService: calendar.New(db),
+		calendarList:    calendarList,
+		calendarDetail:  newCalendarDetailModel(),
 	}
 }
 
@@ -243,6 +263,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.todoDetail.SetSize(msg.Width, listH)
 		a.financeList.SetSize(msg.Width, listH)
 		a.financeDetail.SetSize(msg.Width, listH)
+		a.calendarList.SetSize(msg.Width, listH)
+		a.calendarDetail.SetSize(msg.Width, listH)
 		return a, nil
 
 	case resourcesLoadedMsg:
@@ -319,6 +341,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.updateTodos(msg)
 	case areaFinance:
 		return a.updateFinance(msg)
+	case areaCalendar:
+		return a.updateCalendar(msg)
 	case areaResources:
 		switch a.state {
 		case viewDetail:
@@ -466,7 +490,7 @@ func (a App) View() string {
 	case areaFinance:
 		body = a.viewFinance()
 	case areaCalendar:
-		body = placeholderView("Calendar (coming soon — v3.x)", a.width, a.height)
+		body = a.viewCalendar()
 	case areaTodos:
 		switch a.todoState {
 		case todoStateDetail:
@@ -565,6 +589,19 @@ func (a App) statusLine() string {
 				keyStyle.Render("x")+" purge",
 			)
 		}
+	case areaCalendar:
+		parts = append(parts,
+			keyStyle.Render("n")+" new",
+			keyStyle.Render("e")+" edit",
+			keyStyle.Render("d")+" del",
+			keyStyle.Render("Tab")+" switch",
+		)
+		if a.calendarShowTrashed {
+			parts = append(parts,
+				keyStyle.Render("r")+" restore",
+				keyStyle.Render("x")+" purge",
+			)
+		}
 	}
 	return mutedStyle.Render(strings.Join(parts, "  "))
 }
@@ -589,6 +626,8 @@ func (a App) loadCurrentAreaCmd() tea.Cmd {
 		return loadTodosCmd(a.todosService, a.todoShowTrashed, a.todoSearchActive)
 	case areaFinance:
 		return loadFinanceCmd(a.financeService, a.financeShowTrashed)
+	case areaCalendar:
+		return loadCalendarCmd(a.calendarService, a.calendarShowTrashed)
 	default:
 		return nil
 	}
