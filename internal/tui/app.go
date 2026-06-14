@@ -169,6 +169,7 @@ func New(db *sql.DB) App {
 	todaySvc := today.New(db)
 	todaySvc.Register(providers.NewTodosProvider(db))
 	todaySvc.Register(providers.NewResourcesProvider(db))
+	todaySvc.Register(providers.NewFinanceProvider(db))
 
 	return App{
 		state:       viewList,

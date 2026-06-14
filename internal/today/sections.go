@@ -20,11 +20,13 @@ type Item struct {
 	URL      string   // "/todos/42" or "/resources/7" — empty for TUI-only items
 }
 
-// sectionOrder defines the fixed ordering for v3.0. Sections not in this
-// map are appended at the end in their provider-defined order.
+// sectionOrder defines the fixed ordering for v3.0/v3.x. Sections not in
+// this map are appended at the end in their provider-defined order.
 var sectionOrder = map[string]int{
-	"overdue":   1,
-	"due-today": 2,
-	"upcoming":  3,
-	"recent":    4,
+	"overdue":             1,
+	"due-today":           2,
+	"upcoming":            3,
+	"recent":              4,
+	"this-month-spending": 5,
+	"recent-transactions": 6,
 }

@@ -167,6 +167,8 @@ func TestService_ShowAllURLMapping(t *testing.T) {
 		{"due-today", "/todos?status=open&due=today"},
 		{"upcoming", "/todos?status=open&due=upcoming"},
 		{"recent", "/resources"},
+		{"this-month-spending", "/finance?kind=expense"},
+		{"recent-transactions", "/finance"},
 		{"unknown", ""},
 	}
 	for _, tc := range cases {
@@ -181,6 +183,38 @@ func TestService_ShowAllURLMapping(t *testing.T) {
 		}
 		if secs[0].ShowAllURL != tc.want {
 			t.Errorf("%s: ShowAllURL = %q, want %q", tc.key, secs[0].ShowAllURL, tc.want)
+		}
+	}
+}
+
+func TestService_FinanceSectionOrdering(t *testing.T) {
+	reg := NewRegistry()
+	reg.Register(&mockProvider{name: "finance", sections: []Section{
+		{Key: "this-month-spending", Title: "This Month's Spending", Items: makeItems(1)},
+		{Key: "recent-transactions", Title: "Recent Transactions", Items: makeItems(1)},
+	}})
+	reg.Register(&mockProvider{name: "resources", sections: []Section{
+		{Key: "recent", Title: "Recent Resources", Items: makeItems(1)},
+	}})
+	reg.Register(&mockProvider{name: "todos", sections: []Section{
+		{Key: "overdue", Title: "Overdue", Items: makeItems(1)},
+		{Key: "due-today", Title: "Due Today", Items: makeItems(1)},
+		{Key: "upcoming", Title: "Upcoming", Items: makeItems(1)},
+	}})
+
+	svc := NewWithRegistry(reg)
+	secs, errs := svc.Build(context.Background())
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+
+	want := []string{"overdue", "due-today", "upcoming", "recent", "this-month-spending", "recent-transactions"}
+	if len(secs) != len(want) {
+		t.Fatalf("expected %d sections, got %d", len(want), len(secs))
+	}
+	for i, w := range want {
+		if secs[i].Key != w {
+			t.Errorf("section[%d].Key = %q, want %q", i, secs[i].Key, w)
 		}
 	}
 }

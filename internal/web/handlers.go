@@ -34,6 +34,7 @@ func newHandlers(db *sql.DB) *Handlers {
 	todaySvc := today.New(db)
 	todaySvc.Register(providers.NewTodosProvider(db))
 	todaySvc.Register(providers.NewResourcesProvider(db))
+	todaySvc.Register(providers.NewFinanceProvider(db))
 	return &Handlers{
 		db:           db,
 		queries:      store.New(db),

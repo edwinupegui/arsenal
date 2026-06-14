@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/migrations"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
@@ -211,5 +212,52 @@ func TestService_Build_ShowAllURLOnRecentOverflow(t *testing.T) {
 	}
 	if recent.ShowAllURL != "/resources" {
 		t.Errorf("ShowAllURL = %q, want /resources", recent.ShowAllURL)
+	}
+}
+
+func TestService_Build_FinanceSectionsIntegration(t *testing.T) {
+	db := newTestDB(t)
+	ctx := context.Background()
+	seedTodos(t, todos.New(db))
+	seedResources(t, resources.New(db))
+	finSvc := finance.New(db)
+	for i := 0; i < 3; i++ {
+		_, err := finSvc.Create(ctx, finance.CreateInput{
+			Date:    todayStr(),
+			Amount:  float64(10 * (i + 1)),
+			Kind:    finance.KindExpense,
+			Account: "checking",
+		})
+		if err != nil {
+			t.Fatalf("seed finance: %v", err)
+		}
+	}
+
+	reg := today.NewRegistry()
+	reg.Register(providers.NewTodosProvider(db))
+	reg.Register(providers.NewResourcesProvider(db))
+	reg.Register(providers.NewFinanceProvider(db))
+	todaySvc := today.NewWithRegistry(reg)
+
+	secs, errs := todaySvc.Build(ctx)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+
+	want := []string{"overdue", "due-today", "upcoming", "recent", "this-month-spending", "recent-transactions"}
+	if len(secs) != len(want) {
+		t.Fatalf("expected %d sections, got %d", len(want), len(secs))
+	}
+	for i, w := range want {
+		if secs[i].Key != w {
+			t.Errorf("section[%d].Key = %q, want %q", i, secs[i].Key, w)
+		}
+	}
+
+	// Density cap applies to recent-transactions too.
+	for _, s := range secs {
+		if len(s.Items) > 5 {
+			t.Errorf("section %q has %d items, want ≤ 5", s.Key, len(s.Items))
+		}
 	}
 }

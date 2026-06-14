@@ -79,6 +79,10 @@ func showAllURLFor(key string) string {
 		return "/todos?status=open&due=upcoming"
 	case "recent":
 		return "/resources"
+	case "this-month-spending":
+		return "/finance?kind=expense"
+	case "recent-transactions":
+		return "/finance"
 	default:
 		return ""
 	}
