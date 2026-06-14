@@ -83,6 +83,10 @@ func showAllURLFor(key string) string {
 		return "/finance?kind=expense"
 	case "recent-transactions":
 		return "/finance"
+	case "events-today":
+		return "/calendar?when=today"
+	case "events-upcoming":
+		return "/calendar?when=upcoming"
 	default:
 		return ""
 	}

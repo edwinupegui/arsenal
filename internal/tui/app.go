@@ -202,6 +202,7 @@ func New(db *sql.DB) App {
 	todaySvc.Register(providers.NewTodosProvider(db))
 	todaySvc.Register(providers.NewResourcesProvider(db))
 	todaySvc.Register(providers.NewFinanceProvider(db))
+	todaySvc.Register(providers.NewCalendarProvider(db))
 
 	return App{
 		state:       viewList,

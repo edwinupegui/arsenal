@@ -87,6 +87,9 @@ func New(db *sql.DB, opts Options) *Server {
 	// --- finance ---
 	h.financeRoutes(r)
 
+	// --- calendar ---
+	h.calendarRoutes(r)
+
 	// --- categories / tags ---
 	r.Get("/categories", h.listCategories)
 	r.Get("/tags", h.listTags)

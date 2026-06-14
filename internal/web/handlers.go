@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/edwinupegui/arsenal/internal/calendar"
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/resources"
@@ -23,13 +24,14 @@ import (
 
 // Handlers holds the shared dependencies every HTTP handler reaches for.
 type Handlers struct {
-	db             *sql.DB
-	queries        *store.Queries
-	service        *resources.Service
-	todoService    *todos.Service
-	financeService *finance.Service
-	todayService   *today.Service
-	now            func() time.Time
+	db              *sql.DB
+	queries         *store.Queries
+	service         *resources.Service
+	todoService     *todos.Service
+	financeService  *finance.Service
+	calendarService *calendar.Service
+	todayService    *today.Service
+	now             func() time.Time
 }
 
 func newHandlers(db *sql.DB) *Handlers {
@@ -37,14 +39,16 @@ func newHandlers(db *sql.DB) *Handlers {
 	todaySvc.Register(providers.NewTodosProvider(db))
 	todaySvc.Register(providers.NewResourcesProvider(db))
 	todaySvc.Register(providers.NewFinanceProvider(db))
+	todaySvc.Register(providers.NewCalendarProvider(db))
 	return &Handlers{
-		db:             db,
-		queries:        store.New(db),
-		service:        resources.New(db),
-		todoService:    todos.New(db),
-		financeService: finance.New(db),
-		todayService:   todaySvc,
-		now:            time.Now,
+		db:              db,
+		queries:         store.New(db),
+		service:         resources.New(db),
+		todoService:     todos.New(db),
+		financeService:  finance.New(db),
+		calendarService: calendar.New(db),
+		todayService:    todaySvc,
+		now:             time.Now,
 	}
 }
 
@@ -66,6 +70,9 @@ func (h *Handlers) commonPage(r *http.Request, title, nav string) pageData {
 	}
 	if fc, err := countActiveFinance(r.Context(), h.db); err == nil {
 		pd.FinanceCount = fc
+	}
+	if cc, err := h.queries.CountCalendarEvents(r.Context()); err == nil {
+		pd.CalendarCount = cc
 	}
 	pd.Sidebar = h.buildSidebar(r)
 	return pd

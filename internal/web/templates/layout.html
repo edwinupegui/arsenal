@@ -23,6 +23,7 @@
       <a href="/resources" class="{{if eq .Nav "resources"}}active{{end}}">Resources</a>
       <a href="/todos" class="{{if eq .Nav "todos"}}active{{end}}">Todos</a>
       <a href="/finance" class="{{if eq .Nav "finance"}}active{{end}}">Finance</a>
+      <a href="/calendar" class="{{if eq .Nav "calendar"}}active{{end}}">Calendar</a>
       <a href="/categories" class="{{if eq .Nav "categories"}}active{{end}}">Categories</a>
       <a href="/tags" class="{{if eq .Nav "tags"}}active{{end}}">Tags</a>
       <a href="/trash" class="{{if eq .Nav "trash"}}active{{end}}">Trash</a>
@@ -54,6 +55,10 @@
         <a href="/finance" class="sidebar-link {{if eq .Nav "finance"}}is-active{{end}}">
           <span class="sidebar-link-label">Finance</span>
           {{if gt .FinanceCount 0}}<span class="sidebar-link-count">{{.FinanceCount}}</span>{{end}}
+        </a>
+        <a href="/calendar" class="sidebar-link {{if eq .Nav "calendar"}}is-active{{end}}">
+          <span class="sidebar-link-label">Calendar</span>
+          {{if gt .CalendarCount 0}}<span class="sidebar-link-count">{{.CalendarCount}}</span>{{end}}
         </a>
         <a href="/trash" class="sidebar-link {{if eq .Nav "trash"}}is-active{{end}}">
           <span class="sidebar-link-label">Trash</span>
@@ -229,6 +234,10 @@
   <a href="/finance" class="sidebar-link {{if eq .Nav "finance"}}is-active{{end}}">
     <span class="sidebar-link-label">Finance</span>
     {{if gt .FinanceCount 0}}<span class="sidebar-link-count">{{.FinanceCount}}</span>{{end}}
+  </a>
+  <a href="/calendar" class="sidebar-link {{if eq .Nav "calendar"}}is-active{{end}}">
+    <span class="sidebar-link-label">Calendar</span>
+    {{if gt .CalendarCount 0}}<span class="sidebar-link-count">{{.CalendarCount}}</span>{{end}}
   </a>
   <a href="/trash" class="sidebar-link {{if eq .Nav "trash"}}is-active{{end}}">
     <span class="sidebar-link-label">Trash</span>

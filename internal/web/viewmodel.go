@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/edwinupegui/arsenal/internal/calendar"
 	"github.com/edwinupegui/arsenal/internal/domain"
 	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/store"
@@ -47,6 +48,64 @@ type financeVM struct {
 	UpdatedAt    string
 	DeletedAt    string
 	Trashed      bool
+}
+
+// calendarVM is the flat view-model for calendar events.
+type calendarVM struct {
+	ID           int64
+	Title        string
+	Description  string
+	StartAt      string
+	EndAt        string
+	AllDay       bool
+	Location     string
+	CategorySlug string
+	CategoryName string
+	Notes        string
+	Recurrence   string
+	Tags         []string
+	CreatedAt    string
+	UpdatedAt    string
+	DeletedAt    string
+	Trashed      bool
+}
+
+func toCalendarVM(ev *calendar.Event, catName, catSlug string) calendarVM {
+	vm := calendarVM{
+		ID:           ev.Row.ID,
+		Title:        ev.Row.Title,
+		StartAt:      ev.Row.StartAt,
+		AllDay:       ev.Row.AllDay == 1,
+		Location:     ev.Row.Location,
+		Recurrence:   ev.Row.Recurrence,
+		Tags:         append([]string(nil), ev.Tags...),
+		CategoryName: catName,
+		CategorySlug: catSlug,
+		CreatedAt:    ev.Row.CreatedAt,
+		UpdatedAt:    ev.Row.UpdatedAt,
+	}
+	if ev.Row.Description.Valid {
+		vm.Description = ev.Row.Description.String
+	}
+	if ev.Row.EndAt.Valid {
+		vm.EndAt = ev.Row.EndAt.String
+	}
+	if ev.Row.Notes.Valid {
+		vm.Notes = ev.Row.Notes.String
+	}
+	if ev.Row.DeletedAt.Valid {
+		vm.DeletedAt = ev.Row.DeletedAt.String
+		vm.Trashed = true
+	}
+	return vm
+}
+
+func toCalendarVMs(evts []*calendar.Event) []calendarVM {
+	out := make([]calendarVM, 0, len(evts))
+	for _, e := range evts {
+		out = append(out, toCalendarVM(e, "", ""))
+	}
+	return out
 }
 
 // todoVM is the flat view-model for todos. Mirrors resourceVM pattern.
@@ -251,15 +310,16 @@ type todoCounts struct {
 
 // pageData is the shared envelope every render call passes to the layout.
 type pageData struct {
-	Title        string
-	Nav          string
-	Query        string
-	Flash        flash
-	Counts       counts
-	TodoCounts   todoCounts
-	FinanceCount int64
-	Sidebar      sidebarVM
-	Aside        *asideVM // nil => don't render the right column
+	Title         string
+	Nav           string
+	Query         string
+	Flash         flash
+	Counts        counts
+	TodoCounts    todoCounts
+	FinanceCount  int64
+	CalendarCount int64
+	Sidebar       sidebarVM
+	Aside         *asideVM // nil => don't render the right column
 }
 
 // sidebarLinkVM is one navigable entry in the persistent left sidebar.

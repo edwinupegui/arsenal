@@ -18,6 +18,7 @@ var pageNames = []string{
 	"todos",
 	"today",
 	"finance",
+	"calendar",
 }
 
 // pages is populated at package init with the parsed template tree per page.

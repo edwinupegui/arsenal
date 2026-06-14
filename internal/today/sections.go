@@ -29,4 +29,6 @@ var sectionOrder = map[string]int{
 	"recent":              4,
 	"this-month-spending": 5,
 	"recent-transactions": 6,
+	"events-today":        7,
+	"events-upcoming":     8,
 }
