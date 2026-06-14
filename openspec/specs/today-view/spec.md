@@ -16,7 +16,7 @@ The system MUST provide a `Registry` that holds an ordered list of registered `P
 
 ### REQ-TV-03: Section ordering
 
-The system MUST render sections in this fixed order: **Overdue → Due Today → Upcoming (next 7 days) → Recent Resources**. Empty sections SHALL be omitted from the rendered output (no header shown for zero-item sections). This order is not user-configurable in v3.0.
+The system MUST render sections in this fixed order: **Overdue → Due Today → Upcoming (next 7 days) → Recent Resources → This Month's Spending → Recent Transactions**. Empty sections SHALL be omitted from the rendered output (no header shown for zero-item sections). This order is not user-configurable in v3.0.
 
 ### REQ-TV-04: Section density
 
@@ -49,9 +49,9 @@ The system MUST provide a top-level `arsenal today` CLI command that renders the
 
 ### Scenario: Section ordering is fixed
 
-- **GIVEN** providers return sections with keys "upcoming", "overdue", "due-today", "recent"
+- **GIVEN** providers return sections with keys "upcoming", "overdue", "due-today", "recent", "this-month-spending", "recent-transactions"
 - **WHEN** the Registry produces the ordered page
-- **THEN** sections appear in order: Overdue, Due Today, Upcoming, Recent Resources
+- **THEN** sections appear in order: Overdue, Due Today, Upcoming, Recent Resources, This Month's Spending, Recent Transactions
 
 ### Scenario: Density truncates at 5 items
 
@@ -95,6 +95,20 @@ The system MUST provide a top-level `arsenal today` CLI command that renders the
 - **THEN** only "Upcoming" and "Recent Resources" sections are shown
 - **AND** no "Overdue" or "Due Today" headers appear
 
+### Scenario: Finance sections appear after todo and resource sections
+
+- **GIVEN** `TodosProvider`, `ResourcesProvider`, and `FinanceProvider` all return non-empty sections
+- **WHEN** the Today view renders
+- **THEN** "This Month's Spending" appears after "Recent Resources"
+- **AND** "Recent Transactions" appears after "This Month's Spending"
+
+### Scenario: Finance sections omitted when no data
+
+- **GIVEN** zero finance transactions exist
+- **WHEN** the Today view renders
+- **THEN** "This Month's Spending" and "Recent Transactions" headers do NOT appear
+- **AND** the order remains: Overdue, Due Today, Upcoming, Recent Resources
+
 ### Scenario: CLI command outputs text
 
 - **GIVEN** the Today view has 2 overdue and 1 due-today item
@@ -110,7 +124,7 @@ The system MUST provide a top-level `arsenal today` CLI command that renders the
 
 ## Out of Scope
 
-- Finance and calendar providers (v3.x).
+- Calendar providers (v3.x).
 - Pinned items within sections.
 - Custom user-defined sections.
 - User-configurable section ordering.
