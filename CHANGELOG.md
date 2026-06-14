@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Finance domain end-to-end** — new `internal/finance/` package (domain types, validators, service) backed by `finance_transactions`, `finance_tags`, and a `finance_fts` FTS5 index. Supports expense/income transactions with category, account, tags, notes, and recurrence; full lifecycle (create, edit, soft-delete, restore, purge) with cross-domain orphan-tag cleanup.
+- **Finance CLI** — `arsenal finance add|list|show|edit|rm|restore|purge|export` with date/amount/kind/account/category/tag/notes/recurrence flags, `--json` output, and a non-interactive purge guard.
+- **Finance CSV export** — `arsenal finance export --format csv [--output path]` writes RFC 4180 CSV (tags in a quoted, comma-separated cell), honors filter flags, and emits a header-only file when there is no data.
+- **Finance TUI area** — `areaFinance` is no longer a placeholder; renders a transaction list, detail view, and trash with keybindings for new/edit/delete/restore/purge and navigation.
+- **Finance web surface** — 9 routes (`/finance`, `/finance/new`, `/finance/:id`, `/finance/:id/edit`, `/finance/:id/delete`, `/finance/:id/restore`, `/finance/:id/purge`, etc.) with HTMX card swaps, an empty state, and a sidebar entry with a count badge.
+- **Finance in Today view** — new `FinanceProvider` adds "this-month spending" (total + top categories) and "recent transactions" sections to the cross-domain Today view, timezone-aware and omitted when empty.
+- **Database migration** — `20260613000000_finance.sql` creates `finance_transactions`, `finance_tags`, and `finance_fts` with CHECK constraints, indices, and FTS sync triggers.
 - **Today cross-domain view** — `internal/today/` package with `Provider` interface, `Registry`, `Service`, and two concrete providers (`TodosProvider`, `ResourcesProvider`). Aggregates overdue todos, due-today todos, upcoming todos, and recent resources into a single unified view.
 - **TUI Today area** — `areaToday` is no longer a placeholder; renders real aggregated data with `r` key refresh and `n` key to open an inline new-todo form (title field, default `med` priority, enter saves, esc cancels). Default landing surface changed from `areaResources` to `areaToday`.
 - **Web Today route** — `GET /today` renders the Today view with sectioned cards, density truncation (5 items per section), and "show all" links. Sidebar includes a "Today" entry with overdue count badge that updates via `hx-swap-oob` after mark-done/open actions.
@@ -17,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Todos listing & search** — list all todos with filtering by status, priority, and tags; full-text search via SQLite FTS5.
 - **Tags support** — assign and filter todos by tags; validates shared domain helpers (`domain.WithTags`) with a second domain.
 - **CLI commands** — `arsenal todo add|list|show|edit|done|rm|restore|purge` with flags for priority, tags, recurrence, and JSON output.
-- **TUI area-switcher prototype** — `arsenal tui` with functional **Resources** and **Todos** areas; **Today**, **Finance**, and **Calendar** as placeholder areas.
+- **TUI area-switcher prototype** — `arsenal tui` with functional **Resources**, **Todos**, **Today**, and **Finance** areas; **Calendar** as a placeholder area.
 - **Web interface** — 11 new todo routes (`/todos`, `/todos/new`, `/todos/:id`, `/todos/:id/edit`, `/todos/:id/done`, `/todos/:id/open`, `/todos/:id/delete`, etc.) plus sidebar integration across all pages.
 - **Recurrence placeholder** — schema and domain support for recurring todos (UI wired, scheduler pending).
 - **Database migration** — `20260608000002_todos.sql` creates `todos`, `todo_tags`, and `todo_search` tables with FTS5 indexing.

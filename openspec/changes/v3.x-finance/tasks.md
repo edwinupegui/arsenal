@@ -129,12 +129,12 @@ Chain strategy: pending
 
 ## Phase 8: Final Wiring & Docs
 
-- [ ] 8.1 Run `go build ./...` clean. Run `go test ./... -race -count=1` — all green. Run `golangci-lint run ./...` clean. Run `make sqlc` — no drift.
+- [x] 8.1 Run `go build ./...` clean. Run `go test ./... -race -count=1` — all green. Run `golangci-lint run ./...` clean. Run `make sqlc` — no drift. (Note: `golangci-lint` not installed in env; `go vet ./...` clean instead.)
   - Files: — (verification)
   - Depends: 7.4
   - Acceptance: All checks pass; no regressions in resources/todos/today.
 
-- [ ] 8.2 Update `CHANGELOG.md` — add `[Unreleased] ### Added` section: 7 new finance capabilities, 2 AMENDs, migration, 4 surfaces. Update `docs/CONTINUE.md` resume guide with finance domain context.
+- [x] 8.2 Update `CHANGELOG.md` — add `[Unreleased] ### Added` section: 7 new finance capabilities, 2 AMENDs, migration, 4 surfaces. Update `docs/CONTINUE.md` resume guide with finance domain context.
   - Files: `CHANGELOG.md` (MOD ~20), `docs/CONTINUE.md` (MOD ~15)
   - Depends: 8.1
   - Acceptance: CHANGELOG documents finance domain; resume guide updated.
