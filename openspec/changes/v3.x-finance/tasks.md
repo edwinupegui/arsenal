@@ -107,22 +107,22 @@ Chain strategy: pending
 
 ## Phase 7: Web
 
-- [ ] 7.1 Create `internal/web/finance.go` (~420 LOC) — 9 handlers: `listFinance`, `newFinanceForm`, `createFinance`, `showFinance`, `editFinanceForm`, `updateFinance`, `softDeleteFinance` (HTMX empty fragment), `restoreFinance` (HTMX card), `purgeFinance` (redirect). Add `financeVM` to `internal/web/viewmodel.go` (+30). Register routes via `h.financeRoutes(r)` in `internal/web/handlers.go` (+15).
+- [x] 7.1 Create `internal/web/finance.go` (~420 LOC) — 9 handlers: `listFinance`, `newFinanceForm`, `createFinance`, `showFinance`, `editFinanceForm`, `updateFinance`, `softDeleteFinance` (HTMX empty fragment), `restoreFinance` (HTMX card), `purgeFinance` (redirect). Add `financeVM` to `internal/web/viewmodel.go` (+30). Register routes via `h.financeRoutes(r)` in `internal/web/handlers.go` (+15).
   - Files: `internal/web/finance.go` (NEW ~420 LOC), `internal/web/viewmodel.go` (MOD +30), `internal/web/handlers.go` (MOD +15)
   - Depends: 3.3
   - Acceptance: All 9 routes return correct status; HTMX fragments swap correctly. Specs: finance-web (lifecycle routes).
 
-- [ ] 7.2 Create `internal/web/templates/finance.html` (~230 LOC) — list (card-based, filter controls), show (detail), form (create/edit reuse), card fragment (HTMX swap), empty state.
+- [x] 7.2 Create `internal/web/templates/finance.html` (~230 LOC) — list (card-based, filter controls), show (detail), form (create/edit reuse), card fragment (HTMX swap), empty state.
   - Files: `internal/web/templates/finance.html` (NEW ~230 LOC)
   - Depends: 7.1
   - Acceptance: All views render; filter controls work; empty state shown when no data. Specs: finance-web (list, show, empty).
 
-- [ ] 7.3 Add Finance sidebar entry in `internal/web/templates/layout.html` (+10) — link between Todos and Trash, count badge via `{{if gt .FinanceCount 0}}`. Extend `commonPage()` in `internal/web/handlers.go` with `FinanceCount` via single `COUNT(*)` query (+5). Add header nav entry.
+- [x] 7.3 Add Finance sidebar entry in `internal/web/templates/layout.html` (+10) — link between Todos and Trash, count badge via `{{if gt .FinanceCount 0}}`. Extend `commonPage()` in `internal/web/handlers.go` with `FinanceCount` via single `COUNT(*)` query (+5). Add header nav entry.
   - Files: `internal/web/templates/layout.html` (MOD +10), `internal/web/handlers.go` (MOD +5)
   - Depends: 7.1
   - Acceptance: Badge shows count when >0, hidden when 0; count updates after HTMX actions. Specs: finance-web (sidebar badge).
 
-- [ ] 7.4 Write `internal/web/finance_test.go` (~100 LOC) — `httptest.NewServer` tests: GET /finance list, POST /finance create+redirect, GET /finance/{id} show, POST /finance/{id}/delete HTMX fragment, sidebar badge presence.
+- [x] 7.4 Write `internal/web/finance_test.go` (~100 LOC) — `httptest.NewServer` tests: GET /finance list, POST /finance create+redirect, GET /finance/{id} show, POST /finance/{id}/delete HTMX fragment, sidebar badge presence.
   - Files: `internal/web/finance_test.go` (NEW ~100 LOC)
   - Depends: 7.1–7.3
   - Acceptance: `go test ./internal/web/... -race` PASSES. Specs: finance-web (all 8 scenarios).
