@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/edwinupegui/arsenal/internal/domain"
+	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/store"
 )
 
@@ -23,6 +24,25 @@ type resourceVM struct {
 	CategoryName string
 	Tags         []string
 	Favorite     bool
+	CreatedAt    string
+	UpdatedAt    string
+	DeletedAt    string
+	Trashed      bool
+}
+
+// financeVM is the flat view-model for finance transactions. Mirrors todoVM pattern.
+type financeVM struct {
+	ID           int64
+	Date         string
+	Amount       float64
+	Kind         string
+	Account      string
+	CategorySlug string
+	CategoryName string
+	Notes        string
+	Recurrence   string
+	Currency     string
+	Tags         []string
 	CreatedAt    string
 	UpdatedAt    string
 	DeletedAt    string
@@ -78,6 +98,39 @@ func toTodoVM(t store.Todo, tags []string, catName, catSlug string) todoVM {
 	vm.CategoryName = catName
 	vm.CategorySlug = catSlug
 	return vm
+}
+
+func toFinanceVM(txn *finance.Transaction, catName, catSlug string) financeVM {
+	vm := financeVM{
+		ID:           txn.Row.ID,
+		Date:         txn.Row.Date,
+		Amount:       txn.Row.Amount,
+		Kind:         txn.Row.Kind,
+		Account:      txn.Row.Account,
+		Recurrence:   txn.Row.Recurrence,
+		Currency:     txn.Row.Currency,
+		Tags:         append([]string(nil), txn.Tags...),
+		CategoryName: catName,
+		CategorySlug: catSlug,
+		CreatedAt:    txn.Row.CreatedAt,
+		UpdatedAt:    txn.Row.UpdatedAt,
+	}
+	if txn.Row.Notes.Valid {
+		vm.Notes = txn.Row.Notes.String
+	}
+	if txn.Row.DeletedAt.Valid {
+		vm.DeletedAt = txn.Row.DeletedAt.String
+		vm.Trashed = true
+	}
+	return vm
+}
+
+func toFinanceVMs(txns []*finance.Transaction) []financeVM {
+	out := make([]financeVM, 0, len(txns))
+	for _, t := range txns {
+		out = append(out, toFinanceVM(t, "", ""))
+	}
+	return out
 }
 
 func nullStrPtr(s *string) string {
@@ -198,14 +251,15 @@ type todoCounts struct {
 
 // pageData is the shared envelope every render call passes to the layout.
 type pageData struct {
-	Title      string
-	Nav        string
-	Query      string
-	Flash      flash
-	Counts     counts
-	TodoCounts todoCounts
-	Sidebar    sidebarVM
-	Aside      *asideVM // nil => don't render the right column
+	Title        string
+	Nav          string
+	Query        string
+	Flash        flash
+	Counts       counts
+	TodoCounts   todoCounts
+	FinanceCount int64
+	Sidebar      sidebarVM
+	Aside        *asideVM // nil => don't render the right column
 }
 
 // sidebarLinkVM is one navigable entry in the persistent left sidebar.

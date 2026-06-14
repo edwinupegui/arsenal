@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/edwinupegui/arsenal/internal/domain"
+	"github.com/edwinupegui/arsenal/internal/finance"
 	"github.com/edwinupegui/arsenal/internal/resources"
 	"github.com/edwinupegui/arsenal/internal/store"
 	"github.com/edwinupegui/arsenal/internal/today"
@@ -22,12 +23,13 @@ import (
 
 // Handlers holds the shared dependencies every HTTP handler reaches for.
 type Handlers struct {
-	db           *sql.DB
-	queries      *store.Queries
-	service      *resources.Service
-	todoService  *todos.Service
-	todayService *today.Service
-	now          func() time.Time
+	db             *sql.DB
+	queries        *store.Queries
+	service        *resources.Service
+	todoService    *todos.Service
+	financeService *finance.Service
+	todayService   *today.Service
+	now            func() time.Time
 }
 
 func newHandlers(db *sql.DB) *Handlers {
@@ -36,12 +38,13 @@ func newHandlers(db *sql.DB) *Handlers {
 	todaySvc.Register(providers.NewResourcesProvider(db))
 	todaySvc.Register(providers.NewFinanceProvider(db))
 	return &Handlers{
-		db:           db,
-		queries:      store.New(db),
-		service:      resources.New(db),
-		todoService:  todos.New(db),
-		todayService: todaySvc,
-		now:          time.Now,
+		db:             db,
+		queries:        store.New(db),
+		service:        resources.New(db),
+		todoService:    todos.New(db),
+		financeService: finance.New(db),
+		todayService:   todaySvc,
+		now:            time.Now,
 	}
 }
 
@@ -60,6 +63,9 @@ func (h *Handlers) commonPage(r *http.Request, title, nav string) pageData {
 	}
 	if overdue, err := countOverdueTodos(r.Context(), h.db, h.now()); err == nil {
 		pd.TodoCounts.Overdue = overdue
+	}
+	if fc, err := countActiveFinance(r.Context(), h.db); err == nil {
+		pd.FinanceCount = fc
 	}
 	pd.Sidebar = h.buildSidebar(r)
 	return pd
@@ -621,6 +627,14 @@ func countTrashed(ctx context.Context, db *sql.DB) (int64, error) {
 	var n int64
 	err := db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM resources WHERE deleted_at IS NOT NULL`,
+	).Scan(&n)
+	return n, err
+}
+
+func countActiveFinance(ctx context.Context, db *sql.DB) (int64, error) {
+	var n int64
+	err := db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM finance_transactions WHERE deleted_at IS NULL`,
 	).Scan(&n)
 	return n, err
 }

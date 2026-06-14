@@ -1,0 +1,246 @@
+{{define "finance-card"}}
+<article class="card" id="card-{{.ID}}">
+  <div class="title-row">
+    <a href="/finance/{{.ID}}">{{.Account}}{{if not .Account}}Transaction #{{.ID}}{{end}}</a>
+    <span class="badge kind {{.Kind}}">{{.Kind}}</span>
+    {{if .Trashed}}<span class="badge danger">trashed</span>{{end}}
+  </div>
+
+  <div class="meta">
+    <span class="badge amount">{{printf "%.2f" .Amount}} {{.Currency}}</span>
+    <span class="badge date">{{.Date}}</span>
+    {{if .CategorySlug}}<span class="badge"><a href="/finance?cat={{.CategorySlug}}">{{.CategoryName}}</a></span>{{end}}
+    {{range .Tags}}<a class="tag" href="/finance?tag={{.}}">{{.}}</a>{{end}}
+    {{if ne .Recurrence "none"}}<span class="badge recurrence">{{.Recurrence}}</span>{{end}}
+  </div>
+
+  {{if .Notes}}<p class="description">{{.Notes}}</p>{{end}}
+
+  <div class="footer">
+    <a href="/finance/{{.ID}}/edit">edit</a>
+    {{if .Trashed}}
+      <form method="post" action="/finance/{{.ID}}/restore"
+            hx-post="/finance/{{.ID}}/restore"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            style="display:inline">
+        <button class="btn">restore</button>
+      </form>
+      <form method="post" action="/finance/{{.ID}}/purge"
+            hx-post="/finance/{{.ID}}/purge"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            data-confirm="This will permanently delete the transaction. This cannot be undone."
+            data-confirm-title="Delete forever?"
+            data-confirm-label="Delete forever"
+            style="display:inline">
+        <button class="btn btn-danger">purge</button>
+      </form>
+    {{else}}
+      <form method="post" action="/finance/{{.ID}}/delete"
+            hx-post="/finance/{{.ID}}/delete"
+            hx-target="#card-{{.ID}}"
+            hx-swap="outerHTML"
+            data-confirm="The transaction will move to trash. You can restore it later."
+            data-confirm-title="Move to trash?"
+            data-confirm-label="Move to trash"
+            style="display:inline">
+        <button class="btn btn-danger">delete</button>
+      </form>
+    {{end}}
+    <span class="id">#{{.ID}}</span>
+  </div>
+</article>
+{{end}}
+
+{{define "finance-list"}}
+<div class="toolbar">
+  <h1>{{.Title}}</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/finance/new">+ Add transaction</a>
+</div>
+
+{{if .Filter.Active}}
+<div class="toolbar">
+  <span class="tag">Filter:</span>
+  {{if .Filter.Kind}}<span class="badge">kind:{{.Filter.Kind}}</span>{{end}}
+  {{if .Filter.From}}<span class="badge">from:{{.Filter.From}}</span>{{end}}
+  {{if .Filter.To}}<span class="badge">to:{{.Filter.To}}</span>{{end}}
+  {{if .Filter.Cat}}<span class="badge">cat:{{.Filter.Cat}}</span>{{end}}
+  {{if .Filter.Tag}}<span class="badge">tag:{{.Filter.Tag}}</span>{{end}}
+  {{if .Filter.Trashed}}<span class="badge">trashed</span>{{end}}
+  <a href="/finance" class="btn">clear</a>
+</div>
+{{end}}
+
+<div class="toolbar">
+  <form method="get" action="/finance" style="display:contents">
+    <select name="kind" onchange="this.form.submit()">
+      <option value="">All kinds</option>
+      <option value="expense" {{if eq .Filter.Kind "expense"}}selected{{end}}>Expense</option>
+      <option value="income" {{if eq .Filter.Kind "income"}}selected{{end}}>Income</option>
+    </select>
+    <input type="date" name="from" value="{{.Filter.From}}" placeholder="From date" style="max-width:160px">
+    <input type="date" name="to" value="{{.Filter.To}}" placeholder="To date" style="max-width:160px">
+    <input type="text" name="tag" value="{{.Filter.Tag}}" placeholder="Tag" style="max-width:120px">
+    <button class="btn" type="submit">Filter</button>
+  </form>
+</div>
+
+{{if not .Transactions}}
+  <div class="empty">
+    <h2>No transactions yet</h2>
+    <p>Start tracking your finances.</p>
+    <a class="btn btn-primary" href="/finance/new">+ Add transaction</a>
+  </div>
+{{else}}
+<div class="grid">
+  {{range .Transactions}}
+    {{template "finance-card" .}}
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "finance-detail"}}
+<div class="toolbar">
+  <a class="btn" href="/finance">&larr; Back</a>
+  <span class="spacer"></span>
+  <a class="btn" href="/finance/{{.Transaction.ID}}/edit">Edit</a>
+  {{if .Transaction.Trashed}}
+    <form method="post" action="/finance/{{.Transaction.ID}}/restore" style="display:inline">
+      <button class="btn">Restore</button>
+    </form>
+    <form method="post" action="/finance/{{.Transaction.ID}}/purge"
+          data-confirm="This will permanently delete the transaction. This cannot be undone."
+          data-confirm-title="Delete forever?"
+          data-confirm-label="Delete forever"
+          style="display:inline">
+      <button class="btn btn-danger">Delete forever</button>
+    </form>
+  {{else}}
+    <form method="post" action="/finance/{{.Transaction.ID}}/delete"
+          data-confirm="The transaction will move to trash. You can restore it later."
+          data-confirm-title="Move to trash?"
+          data-confirm-label="Move to trash"
+          style="display:inline">
+      <button class="btn btn-danger">Move to trash</button>
+    </form>
+  {{end}}
+</div>
+
+<article class="detail">
+  <h1>{{if .Transaction.Account}}{{.Transaction.Account}}{{else}}Transaction #{{.Transaction.ID}}{{end}}</h1>
+  <dl>
+    <dt>Amount</dt><dd><span class="badge amount">{{printf "%.2f" .Transaction.Amount}} {{.Transaction.Currency}}</span></dd>
+    <dt>Kind</dt><dd><span class="badge kind {{.Transaction.Kind}}">{{.Transaction.Kind}}</span></dd>
+    <dt>Date</dt><dd>{{.Transaction.Date}}</dd>
+    <dt>Account</dt><dd>{{if .Transaction.Account}}{{.Transaction.Account}}{{else}}&mdash;{{end}}</dd>
+    <dt>Category</dt><dd>
+      {{if .Transaction.CategorySlug}}
+        <a href="/finance?cat={{.Transaction.CategorySlug}}">{{.Transaction.CategoryName}}</a>
+      {{else}}&mdash;{{end}}
+    </dd>
+    <dt>Tags</dt><dd>
+      {{if .Transaction.Tags}}
+        {{range .Transaction.Tags}}<a class="tag" href="/finance?tag={{.}}">{{.}}</a> {{end}}
+      {{else}}&mdash;{{end}}
+    </dd>
+    <dt>Recurrence</dt><dd>{{.Transaction.Recurrence}}</dd>
+    <dt>Currency</dt><dd>{{.Transaction.Currency}}</dd>
+    <dt>Created</dt><dd>{{.Transaction.CreatedAt}}</dd>
+    <dt>Updated</dt><dd>{{.Transaction.UpdatedAt}}</dd>
+    {{if .Transaction.Trashed}}<dt>Trashed</dt><dd>{{.Transaction.DeletedAt}}</dd>{{end}}
+  </dl>
+
+  {{if .Transaction.Notes}}
+    <h2>Notes</h2>
+    <div class="body">{{.Transaction.Notes}}</div>
+  {{end}}
+</article>
+{{end}}
+
+{{define "finance-form"}}
+<div class="toolbar">
+  <a class="btn" href="{{.CancelURL}}">&larr; Cancel</a>
+  <span class="spacer"></span>
+</div>
+
+<article class="detail">
+  <h1>{{.Title}}</h1>
+  {{if .FormError}}<div class="flash flash-danger">{{.FormError}}</div>{{end}}
+
+  <form class="resource-form" method="post" action="{{.Action}}">
+    <fieldset class="row">
+      <div>
+        <label for="amount">Amount</label>
+        <input id="amount" name="amount" type="number" step="0.01" min="0.01" required value="{{.Form.Amount}}" placeholder="0.00">
+      </div>
+      <div>
+        <label for="kind">Kind</label>
+        <select id="kind" name="kind">
+          {{range .Kinds}}
+            <option value="{{.}}" {{if eq . $.Form.Kind}}selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </div>
+      <div>
+        <label for="date">Date</label>
+        <input id="date" name="date" type="date" value="{{.Form.Date}}">
+      </div>
+    </fieldset>
+
+    <fieldset class="row">
+      <div>
+        <label for="account">Account</label>
+        <input id="account" name="account" value="{{.Form.Account}}" placeholder="e.g. Checking">
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">&mdash; uncategorized &mdash;</option>
+          {{range .Categories}}
+            <option value="{{.Slug}}" {{if eq .Slug $.Form.Category}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        </select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label for="recurrence">Recurrence</label>
+      <select id="recurrence" name="recurrence">
+        {{range .Recurrences}}
+          <option value="{{.}}" {{if eq . $.Form.Recurrence}}selected{{end}}>{{.}}</option>
+        {{end}}
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <label for="tags">Tags (comma separated)</label>
+      <input id="tags" name="tags" value="{{.Form.Tags}}" placeholder="food, transport, recurring">
+    </fieldset>
+
+    <fieldset>
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="4">{{.Form.Notes}}</textarea>
+    </fieldset>
+
+    <div class="actions">
+      <a class="btn" href="{{.CancelURL}}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{{.SubmitLabel}}</button>
+    </div>
+  </form>
+</article>
+{{end}}
+
+{{define "content"}}
+{{if eq .Kind "new"}}
+  {{template "finance-form" .}}
+{{else if eq .Kind "edit"}}
+  {{template "finance-form" .}}
+{{else if .Transaction.ID}}
+  {{template "finance-detail" .}}
+{{else}}
+  {{template "finance-list" .}}
+{{end}}
+{{end}}
