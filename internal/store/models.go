@@ -14,6 +14,33 @@ type ArsenalConfig struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+type CalendarEvent struct {
+	ID          int64          `json:"id"`
+	Title       string         `json:"title"`
+	Description sql.NullString `json:"description"`
+	StartAt     string         `json:"start_at"`
+	EndAt       sql.NullString `json:"end_at"`
+	AllDay      int64          `json:"all_day"`
+	Location    string         `json:"location"`
+	CategoryID  sql.NullInt64  `json:"category_id"`
+	Notes       sql.NullString `json:"notes"`
+	Recurrence  string         `json:"recurrence"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
+	DeletedAt   sql.NullString `json:"deleted_at"`
+}
+
+type CalendarFt struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Location    string `json:"location"`
+}
+
+type CalendarTag struct {
+	EventID int64 `json:"event_id"`
+	TagID   int64 `json:"tag_id"`
+}
+
 type Category struct {
 	ID        int64  `json:"id"`
 	Slug      string `json:"slug"`

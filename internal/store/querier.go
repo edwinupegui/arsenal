@@ -10,11 +10,14 @@ import (
 
 type Querier interface {
 	AttachTag(ctx context.Context, arg AttachTagParams) error
+	AttachTagToCalendar(ctx context.Context, arg AttachTagToCalendarParams) error
 	AttachTagToFinance(ctx context.Context, arg AttachTagToFinanceParams) error
 	AttachTagToTodo(ctx context.Context, arg AttachTagToTodoParams) error
+	CountCalendarEvents(ctx context.Context) (int64, error)
 	CountFinanceTransactions(ctx context.Context) (int64, error)
 	CountOpenTodos(ctx context.Context) (int64, error)
 	CountResources(ctx context.Context) (int64, error)
+	CreateCalendarEvent(ctx context.Context, arg CreateCalendarEventParams) (CalendarEvent, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateFinanceTransaction(ctx context.Context, arg CreateFinanceTransactionParams) (FinanceTransaction, error)
 	CreateResource(ctx context.Context, arg CreateResourceParams) (Resource, error)
@@ -23,11 +26,13 @@ type Querier interface {
 	DeleteCategory(ctx context.Context, id int64) error
 	DeleteOrphanTags(ctx context.Context) error
 	DeleteTag(ctx context.Context, id int64) error
+	DetachAllTagsFromCalendar(ctx context.Context, eventID int64) error
 	DetachAllTagsFromFinance(ctx context.Context, financeID int64) error
 	DetachAllTagsFromResource(ctx context.Context, resourceID int64) error
 	// SearchTodos is hand-written in search.go (FTS5 MATCH not parseable by sqlc)
 	DetachAllTagsFromTodo(ctx context.Context, todoID int64) error
 	DetachTag(ctx context.Context, arg DetachTagParams) error
+	GetCalendarEvent(ctx context.Context, id int64) (CalendarEvent, error)
 	GetCategory(ctx context.Context, id int64) (Category, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (Category, error)
 	GetFinanceTransaction(ctx context.Context, id int64) (FinanceTransaction, error)
@@ -35,12 +40,19 @@ type Querier interface {
 	GetResourceByURL(ctx context.Context, url string) (Resource, error)
 	GetTagByName(ctx context.Context, name string) (Tag, error)
 	GetTodo(ctx context.Context, id int64) (Todo, error)
+	ListCalendarEvents(ctx context.Context, arg ListCalendarEventsParams) ([]CalendarEvent, error)
 	ListCategories(ctx context.Context) ([]Category, error)
 	ListCategoriesWithCounts(ctx context.Context) ([]ListCategoriesWithCountsRow, error)
+	// Events whose start_at falls within [dayStart, dayEnd]. The provider passes
+	// bounds formatted for the all_day branch (date) or timed branch (datetime).
+	ListEventsToday(ctx context.Context, arg ListEventsTodayParams) ([]CalendarEvent, error)
+	// Events whose start_at falls within (dayEnd, weekEnd].
+	ListEventsUpcoming(ctx context.Context, arg ListEventsUpcomingParams) ([]CalendarEvent, error)
 	ListFinanceByMonth(ctx context.Context, arg ListFinanceByMonthParams) ([]FinanceTransaction, error)
 	ListFinanceTransactions(ctx context.Context, arg ListFinanceTransactionsParams) ([]FinanceTransaction, error)
 	ListResources(ctx context.Context, arg ListResourcesParams) ([]Resource, error)
 	ListTags(ctx context.Context) ([]ListTagsRow, error)
+	ListTagsForCalendar(ctx context.Context, eventID int64) ([]Tag, error)
 	ListTagsForFinance(ctx context.Context, financeID int64) ([]Tag, error)
 	ListTagsForResource(ctx context.Context, resourceID int64) ([]Tag, error)
 	ListTagsForTodo(ctx context.Context, todoID int64) ([]Tag, error)
@@ -49,23 +61,28 @@ type Querier interface {
 	ListTodosByStatus(ctx context.Context, status string) ([]Todo, error)
 	ListTodosDueBefore(ctx context.Context, dueDate *string) ([]Todo, error)
 	ListTodosDueBetween(ctx context.Context, arg ListTodosDueBetweenParams) ([]Todo, error)
+	ListTrashedCalendarEvents(ctx context.Context) ([]CalendarEvent, error)
 	ListTrashedFinanceTransactions(ctx context.Context) ([]FinanceTransaction, error)
 	ListTrashedResources(ctx context.Context) ([]Resource, error)
 	ListTrashedTodos(ctx context.Context) ([]Todo, error)
 	MarkTodoDone(ctx context.Context, id int64) error
 	MarkTodoOpen(ctx context.Context, id int64) error
+	PurgeCalendarEvent(ctx context.Context, id int64) error
 	PurgeFinanceTransaction(ctx context.Context, id int64) error
 	PurgeResource(ctx context.Context, id int64) error
 	PurgeTodo(ctx context.Context, id int64) error
 	RenameTag(ctx context.Context, arg RenameTagParams) (Tag, error)
+	RestoreCalendarEvent(ctx context.Context, id int64) error
 	RestoreFinanceTransaction(ctx context.Context, id int64) error
 	RestoreResource(ctx context.Context, id int64) error
 	RestoreTodo(ctx context.Context, id int64) error
 	SetFavorite(ctx context.Context, arg SetFavoriteParams) error
+	SoftDeleteCalendarEvent(ctx context.Context, id int64) error
 	SoftDeleteFinanceTransaction(ctx context.Context, id int64) error
 	SoftDeleteResource(ctx context.Context, id int64) error
 	SoftDeleteTodo(ctx context.Context, id int64) error
 	TopCategoriesByMonth(ctx context.Context, arg TopCategoriesByMonthParams) ([]TopCategoriesByMonthRow, error)
+	UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEventParams) (CalendarEvent, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateFinanceTransaction(ctx context.Context, arg UpdateFinanceTransactionParams) (FinanceTransaction, error)
 	UpdateResource(ctx context.Context, arg UpdateResourceParams) (Resource, error)

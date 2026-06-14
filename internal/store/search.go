@@ -203,6 +203,66 @@ LIMIT ?`
 	return out, nil
 }
 
+// SearchCalendar runs a full-text search over title, description, and location
+// using FTS5 and returns results enriched with category info and aggregated
+// tags, matching the shape produced by ListCalendarFiltered. Soft-deleted
+// events are excluded.
+func (q *Queries) SearchCalendar(ctx context.Context, query string, limit int64) ([]ListedCalendar, error) {
+	match := buildFTSQuery(query)
+	if match == "" {
+		return []ListedCalendar{}, nil
+	}
+
+	const stmt = `
+SELECT e.id, e.title, e.description, e.start_at, e.end_at, e.all_day, e.location,
+       e.category_id, e.notes, e.recurrence, e.created_at, e.updated_at, e.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM calendar_tags ct
+         JOIN tags tag ON tag.id = ct.tag_id
+         WHERE ct.event_id = e.id
+       ) AS tag_csv
+FROM calendar_fts cf
+JOIN calendar_events e ON e.id = cf.rowid
+LEFT JOIN categories c ON c.id = e.category_id
+WHERE calendar_fts MATCH ?
+  AND e.deleted_at IS NULL
+ORDER BY rank
+LIMIT ?`
+
+	rows, err := q.db.QueryContext(ctx, stmt, match, limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedCalendar
+	for rows.Next() {
+		var lc ListedCalendar
+		var tagCSV string
+		if err := rows.Scan(
+			&lc.Calendar.ID, &lc.Calendar.Title, &lc.Calendar.Description,
+			&lc.Calendar.StartAt, &lc.Calendar.EndAt, &lc.Calendar.AllDay,
+			&lc.Calendar.Location, &lc.Calendar.CategoryID, &lc.Calendar.Notes,
+			&lc.Calendar.Recurrence, &lc.Calendar.CreatedAt, &lc.Calendar.UpdatedAt,
+			&lc.Calendar.DeletedAt,
+			&lc.CategoryName, &lc.CategorySlug,
+			&tagCSV,
+		); err != nil {
+			return nil, fmt.Errorf("fts scan: %w", err)
+		}
+		if tagCSV != "" {
+			lc.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lc)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("fts iterate: %w", err)
+	}
+	return out, nil
+}
+
 func stripFTSSpecials(s string) string {
 	const specials = `"'()*:^-+`
 	return strings.Map(func(r rune) rune {

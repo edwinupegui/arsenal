@@ -261,6 +261,120 @@ LEFT JOIN categories c ON c.id = f.category_id`
 	return out, rows.Err()
 }
 
+// CalendarListFilter drives the dynamic listing query for calendar events.
+type CalendarListFilter struct {
+	From         *string // start_at lower bound (inclusive)
+	To           *string // start_at upper bound (inclusive)
+	Recurrence   *string // exact match
+	CategorySlug string  // empty = no filter
+	TagName      string  // empty = no filter
+	Trashed      bool
+	Limit        int
+	Offset       int
+}
+
+// ListedCalendar bundles a calendar event row with its resolved category
+// name/slug and tag list.
+type ListedCalendar struct {
+	Calendar     CalendarEvent
+	CategoryName sql.NullString
+	CategorySlug sql.NullString
+	Tags         []string
+}
+
+// ListCalendarFiltered runs a dynamic SQL query against the destination DB using
+// filter. Tags are aggregated in-query via GROUP_CONCAT.
+func (q *Queries) ListCalendarFiltered(ctx context.Context, filter CalendarListFilter) ([]ListedCalendar, error) {
+	const base = `
+SELECT e.id, e.title, e.description, e.start_at, e.end_at, e.all_day, e.location,
+       e.category_id, e.notes, e.recurrence, e.created_at, e.updated_at, e.deleted_at,
+       c.name AS category_name, c.slug AS category_slug,
+       (
+         SELECT COALESCE(GROUP_CONCAT(tag.name, ','), '')
+         FROM calendar_tags ct
+         JOIN tags tag ON tag.id = ct.tag_id
+         WHERE ct.event_id = e.id
+       ) AS tag_csv
+FROM calendar_events e
+LEFT JOIN categories c ON c.id = e.category_id`
+
+	conds := []string{}
+	args := []any{}
+
+	if filter.Trashed {
+		conds = append(conds, "e.deleted_at IS NOT NULL")
+	} else {
+		conds = append(conds, "e.deleted_at IS NULL")
+	}
+	if filter.From != nil && *filter.From != "" {
+		conds = append(conds, "e.start_at >= ?")
+		args = append(args, *filter.From)
+	}
+	if filter.To != nil && *filter.To != "" {
+		conds = append(conds, "e.start_at <= ?")
+		args = append(args, *filter.To)
+	}
+	if filter.Recurrence != nil && *filter.Recurrence != "" {
+		conds = append(conds, "e.recurrence = ?")
+		args = append(args, *filter.Recurrence)
+	}
+	if filter.CategorySlug != "" {
+		conds = append(conds, "c.slug = ? COLLATE NOCASE")
+		args = append(args, filter.CategorySlug)
+	}
+	if filter.TagName != "" {
+		conds = append(conds, `EXISTS (
+			SELECT 1 FROM calendar_tags ct
+			JOIN tags tg ON tg.id = ct.tag_id
+			WHERE ct.event_id = e.id AND tg.name = ? COLLATE NOCASE
+		)`)
+		args = append(args, filter.TagName)
+	}
+
+	q1 := base
+	if len(conds) > 0 {
+		q1 += "\nWHERE " + strings.Join(conds, " AND ")
+	}
+	q1 += "\nORDER BY e.start_at ASC, e.created_at DESC, e.id DESC"
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	q1 += fmt.Sprintf("\nLIMIT %d", limit)
+	if filter.Offset > 0 {
+		q1 += fmt.Sprintf(" OFFSET %d", filter.Offset)
+	}
+
+	rows, err := q.db.QueryContext(ctx, q1, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list calendar: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedCalendar
+	for rows.Next() {
+		var lc ListedCalendar
+		var tagCSV string
+		if err := rows.Scan(
+			&lc.Calendar.ID, &lc.Calendar.Title, &lc.Calendar.Description,
+			&lc.Calendar.StartAt, &lc.Calendar.EndAt, &lc.Calendar.AllDay,
+			&lc.Calendar.Location, &lc.Calendar.CategoryID, &lc.Calendar.Notes,
+			&lc.Calendar.Recurrence, &lc.Calendar.CreatedAt, &lc.Calendar.UpdatedAt,
+			&lc.Calendar.DeletedAt,
+			&lc.CategoryName, &lc.CategorySlug,
+			&tagCSV,
+		); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+		if tagCSV != "" {
+			lc.Tags = strings.Split(tagCSV, ",")
+		}
+		out = append(out, lc)
+	}
+	return out, rows.Err()
+}
+
 // ListTodosFiltered runs a dynamic SQL query against the destination DB using
 // filter. Tags are aggregated in-query via GROUP_CONCAT.
 func (q *Queries) ListTodosFiltered(ctx context.Context, filter TodoListFilter) ([]ListedTodo, error) {

@@ -42,3 +42,23 @@ sql:
             go_type:
               import: "database/sql"
               type: "NullInt64"
+          - column: "calendar_events.deleted_at"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "calendar_events.description"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "calendar_events.end_at"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "calendar_events.notes"
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+          - column: "calendar_events.category_id"
+            go_type:
+              import: "database/sql"
+              type: "NullInt64"
