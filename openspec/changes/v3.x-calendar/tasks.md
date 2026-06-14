@@ -30,7 +30,7 @@ Chain strategy: pending
 
 ## Phase 1: Migration & Schema
 
-- [ ] 1.1 Write `internal/migrations/<timestamp>_calendar.sql` — `calendar_events` (13 cols, CHECK all_day 0/1, CHECK recurrence enum incl. yearly), `calendar_tags` junction, `calendar_fts` FTS5 on title/description/location, 3 indices, `updated_at` trigger, 3 FTS sync triggers. `IF NOT EXISTS` on tables/indices/triggers; omit on FTS virtual table (SQLite limitation). Include timezone storage comment. Down section with DROP in reverse order.
+- [x] 1.1 Write `internal/migrations/<timestamp>_calendar.sql` — `calendar_events` (13 cols, CHECK all_day 0/1, CHECK recurrence enum incl. yearly), `calendar_tags` junction, `calendar_fts` FTS5 on title/description/location, 3 indices, `updated_at` trigger, 3 FTS sync triggers. `IF NOT EXISTS` on tables/indices/triggers; omit on FTS virtual table (SQLite limitation). Include timezone storage comment. Down section with DROP in reverse order.
   - Files: `internal/migrations/<timestamp>_calendar.sql` (NEW)
   - Depends: —
   - Acceptance: `goose up` on fresh DB; CHECK rejects `all_day=2`, `recurrence='biweekly'`; nullable `end_at` inserts clean; FTS sync fires on insert/update/delete; 3 indices exist; timezone comment present. `go test ./... -race -count=1` green.
@@ -38,34 +38,34 @@ Chain strategy: pending
 
 ## Phase 2: sqlc Queries & Store
 
-- [ ] 2.1 Write `internal/store/queries/calendar.sql` — 14 named queries: `CreateCalendarEvent`, `GetCalendarEvent`, `ListCalendarEvents`, `ListTrashedCalendarEvents`, `UpdateCalendarEvent`, `SoftDeleteCalendarEvent`, `RestoreCalendarEvent`, `PurgeCalendarEvent`, `CountCalendarEvents`, `ListEventsToday`, `ListEventsUpcoming`, `ListTagsForCalendar`, `AttachTagToCalendar`, `DetachAllTagsFromCalendar`. Add 5 sqlc.yaml overrides for `deleted_at`, `description`, `end_at`, `notes` (NullString), `category_id` (NullInt64).
+- [x] 2.1 Write `internal/store/queries/calendar.sql` — 14 named queries: `CreateCalendarEvent`, `GetCalendarEvent`, `ListCalendarEvents`, `ListTrashedCalendarEvents`, `UpdateCalendarEvent`, `SoftDeleteCalendarEvent`, `RestoreCalendarEvent`, `PurgeCalendarEvent`, `CountCalendarEvents`, `ListEventsToday`, `ListEventsUpcoming`, `ListTagsForCalendar`, `AttachTagToCalendar`, `DetachAllTagsFromCalendar`. Add 5 sqlc.yaml overrides for `deleted_at`, `description`, `end_at`, `notes` (NullString), `category_id` (NullInt64).
   - Files: `internal/store/queries/calendar.sql` (NEW), `sqlc.yaml` (MOD +5 overrides)
   - Depends: 1.1
   - Acceptance: SQL parses correctly; sqlc.yaml override annotations valid. Covers: calendar-service (query contract).
 
-- [ ] 2.2 Run `sqlc generate` → `internal/store/calendar.sql.go`, updated `models.go`, `querier.go`. Add hand-written `ListCalendarFiltered` + `CalendarListFilter` + `ListedCalendar` to `internal/store/list.go` (mirrors `ListFinanceFiltered`). Add hand-written `SearchCalendar` to `internal/store/search.go`.
+- [x] 2.2 Run `sqlc generate` → `internal/store/calendar.sql.go`, updated `models.go`, `querier.go`. Add hand-written `ListCalendarFiltered` + `CalendarListFilter` + `ListedCalendar` to `internal/store/list.go` (mirrors `ListFinanceFiltered`). Add hand-written `SearchCalendar` to `internal/store/search.go`.
   - Files: `internal/store/calendar.sql.go` (GEN), `internal/store/models.go` (GEN), `internal/store/querier.go` (GEN), `internal/store/list.go` (MOD ~+70), `internal/store/search.go` (MOD ~+35)
   - Depends: 2.1
   - Acceptance: `go build ./internal/store/...` clean; `make sqlc` no drift. Covers: calendar-service (List filter, FTS5 search).
 
 ## Phase 3: Service & Domain Package
 
-- [ ] 3.1 Create `internal/calendar/event.go` — `Recurrence` enum (none/daily/weekly/monthly/yearly) with `Valid()`, `String()`, `AllRecurrences()`; `CreateInput`, `Filter`, `ExportRow` structs; `validateCreate` (title required, recurrence valid, start_at parseable, all_day/format agreement, EndAt >= StartAt); `nullableString`, `nullableInt64`, `boolToInt` helpers.
+- [x] 3.1 Create `internal/calendar/event.go` — `Recurrence` enum (none/daily/weekly/monthly/yearly) with `Valid()`, `String()`, `AllRecurrences()`; `CreateInput`, `Filter`, `ExportRow` structs; `validateCreate` (title required, recurrence valid, start_at parseable, all_day/format agreement, EndAt >= StartAt); `nullableString`, `nullableInt64`, `boolToInt` helpers.
   - Files: `internal/calendar/event.go` (NEW ~90 LOC)
   - Depends: 2.2
   - Acceptance: `go build ./internal/calendar/...` clean. Covers: calendar-service (Event domain type, validateCreate invariants).
 
-- [ ] 3.2 RED: Write `internal/calendar/service_test.go` — table-driven tests using `newTestDB(t)`: Create timed event, Create all-day event, Create open-ended (NULL end_at), reject invalid recurrence, reject all_day+datetime start_at mismatch, reject empty title, Update changes start_at/end_at, Update clears end_at to NULL, Update changes tags, Update non-existent fails, SoftDelete sets deleted_at, SoftDelete idempotent, Restore clears deleted_at, Restore idempotent, Purge hard-deletes + FTS entry removed, List filter by date range, List all-day only, List trashed, List by tag, Export returns all (no truncation), Export excludes trashed, Attacher creates junction rows, start_at stored without tz offset.
+- [x] 3.2 RED: Write `internal/calendar/service_test.go` — table-driven tests using `newTestDB(t)`: Create timed event, Create all-day event, Create open-ended (NULL end_at), reject invalid recurrence, reject all_day+datetime start_at mismatch, reject empty title, Update changes start_at/end_at, Update clears end_at to NULL, Update changes tags, Update non-existent fails, SoftDelete sets deleted_at, SoftDelete idempotent, Restore clears deleted_at, Restore idempotent, Purge hard-deletes + FTS entry removed, List filter by date range, List all-day only, List trashed, List by tag, Export returns all (no truncation), Export excludes trashed, Attacher creates junction rows, start_at stored without tz offset.
   - Files: `internal/calendar/service_test.go` (NEW ~650 LOC)
   - Depends: 3.1
   - Acceptance: `go test ./internal/calendar/...` FAILS (compile errors — service not yet written). Covers: calendar-service (all 22 scenarios), calendar-migration (constraint scenarios via service test).
 
-- [ ] 3.3 GREEN: Create `internal/calendar/attacher.go` (~40 LOC) — mirrors `finance/attacher.go`; `OwnerKind="calendar"`; `AttachTagToOwner` calls `AttachTagToCalendar(event_id, tag_id)`; `DeleteOrphanTags` via shared query. Create `internal/calendar/service.go` (~240 LOC) — `Service{db, q, now}`, `New`, `Create` (validate, tx, insert, attach tags PruneOrphans:false), `Get`, `Update` (detach-all + re-attach PruneOrphans:true), `SoftDelete`, `Restore`, `Purge` (WithTx + cascade). Add `List` (delegates `ListCalendarFiltered` or `SearchCalendar`) and `Export` (resolves category names + tags → ExportRow).
+- [x] 3.3 GREEN: Create `internal/calendar/attacher.go` (~40 LOC) — mirrors `finance/attacher.go`; `OwnerKind="calendar"`; `AttachTagToOwner` calls `AttachTagToCalendar(event_id, tag_id)`; `DeleteOrphanTags` via shared query. Create `internal/calendar/service.go` (~240 LOC) — `Service{db, q, now}`, `New`, `Create` (validate, tx, insert, attach tags PruneOrphans:false), `Get`, `Update` (detach-all + re-attach PruneOrphans:true), `SoftDelete`, `Restore`, `Purge` (WithTx + cascade). Add `List` (delegates `ListCalendarFiltered` or `SearchCalendar`) and `Export` (resolves category names + tags → ExportRow).
   - Files: `internal/calendar/attacher.go` (NEW ~40 LOC), `internal/calendar/service.go` (NEW ~240 LOC)
   - Depends: 3.2
   - Acceptance: `go test ./internal/calendar/... -race -count=1` PASSES (all service tests green). Covers: calendar-service (all scenarios).
 
-- [ ] 3.4 REFACTOR: Verify service compiles clean; verify orphan cleanup covers `calendar_tags` (attacher calls shared `DeleteOrphanTags`). Run `go test ./... -race -count=1` — no regressions in resources/todos/finance.
+- [x] 3.4 REFACTOR: Verify service compiles clean; verify orphan cleanup covers `calendar_tags` (attacher calls shared `DeleteOrphanTags`). Run `go test ./... -race -count=1` — no regressions in resources/todos/finance.
   - Files: — (verification only)
   - Depends: 3.3
   - Acceptance: All existing tests green; orphan cleanup verified across all 4 domains. Covers: calendar-service (REQ: Attacher for domain.WithTags).
