@@ -65,6 +65,50 @@ func wireCompletions(root *cobra.Command) {
 		_ = c.RegisterFlagCompletionFunc("status", completeStatuses)
 		_ = c.RegisterFlagCompletionFunc("recurrence", completeRecurrences)
 	}
+
+	// Finance subcommand completions.
+	for _, name := range []string{"show", "rm", "restore", "edit", "purge"} {
+		if c, _, err := root.Find([]string{"finance", name}); err == nil {
+			c.ValidArgsFunction = completeFinanceIDs
+		}
+	}
+	for _, name := range []string{"add", "list", "export"} {
+		c, _, err := root.Find([]string{"finance", name})
+		if err != nil {
+			continue
+		}
+		_ = c.RegisterFlagCompletionFunc("cat", completeCategorySlugs)
+		_ = c.RegisterFlagCompletionFunc("tag", completeTagNames)
+		_ = c.RegisterFlagCompletionFunc("kind", completeFinanceKinds)
+		_ = c.RegisterFlagCompletionFunc("recurrence", completeRecurrences)
+	}
+}
+
+// completeFinanceIDs returns recent transaction IDs paired with account preview.
+func completeFinanceIDs(cmd *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	app, err := initApp(cmd.Context())
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	defer app.DB.Close()
+
+	items, err := app.Queries.ListFinanceFiltered(cmd.Context(), store.FinanceListFilter{Limit: 200})
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	out := make([]string, 0, len(items))
+	for _, f := range items {
+		out = append(out, fmt.Sprintf("%d\t%s (%s)", f.Finance.ID, f.Finance.Account, f.Finance.Kind))
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeFinanceKinds is the static transaction kind enum.
+func completeFinanceKinds(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return []string{"expense", "income"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 // completeResourceIDs returns recent resource IDs paired with title preview.
