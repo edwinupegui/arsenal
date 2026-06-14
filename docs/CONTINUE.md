@@ -13,8 +13,9 @@
 - **4 v3.0.1 backlog items done** in this session: TUI n-key form, timezone ADR, ShowAllURL provider relaxation, DueAfter in ListFilter.
 - **Only one follow-up remains**: implement the timezone changes per ADR-0003 (~50 LOC, 4 call sites, 6 tests). The decision is documented; the code is a separate task.
 - **v3.x Finance — DONE**: `internal/finance/` service, `arsenal finance` CLI (incl. CSV export), TUI `areaFinance`, web `/finance` routes + sidebar badge, and `FinanceProvider` wired into the Today view. Migration `20260613000000_finance.sql`. Archived in `openspec/changes/archive/2026-06-14-v3.x-finance/`.
-- **v3.x Calendar — DONE**: `internal/calendar/` service, `arsenal calendar` CLI (incl. iCal/RFC 5545 export), TUI `areaCalendar`, web `/calendar` routes + sidebar badge, and `CalendarProvider` (today's events + upcoming) wired into the Today view. Migration `20260614000000_calendar.sql`. See `openspec/changes/v3.x-calendar/`.
-- **Next**: no deferred v3.x domains remain from ADR-0002. Candidate follow-ups: recurrence expansion (todos/finance/calendar share a metadata-only `recurrence` enum with no scheduler), and the `Calendar` web `?when=today|upcoming` filter is currently a display hint (no separate server-side predicate).
+- **v3.x Calendar — DONE**: `internal/calendar/` service, `arsenal calendar` CLI (incl. iCal/RFC 5545 export), TUI `areaCalendar`, web `/calendar` routes + sidebar badge, and `CalendarProvider` (today's events + upcoming) wired into the Today view. Migration `20260614000000_calendar.sql`. Archived in `openspec/changes/archive/2026-06-14-v3.x-calendar/`.
+- **Today show-all URLs are timezone-aware**: `Service.Build` derives its clock via `UserLocation`, so calendar from/to windows match the section shown even near midnight in non-UTC zones (injectable `clock` for deterministic tests).
+- **Next**: v3.x is complete — no deferred domains remain from ADR-0002. Out-of-scope by deliberate ADR decision (would be a NEW change, not a gap): recurrence expansion (todos/finance/calendar share a metadata-only `recurrence` enum, no scheduler per ADR-0001/0002). Minor: the `Calendar` web `?when=today|upcoming` param is now unused dead code (Today links use from/to) and could be removed.
 
 ---
 
