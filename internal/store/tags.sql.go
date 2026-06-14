@@ -31,6 +31,8 @@ WHERE id NOT IN (
     SELECT DISTINCT tag_id FROM todo_tags
     UNION
     SELECT DISTINCT tag_id FROM finance_tags
+    UNION
+    SELECT DISTINCT tag_id FROM calendar_tags
 )
 `
 

@@ -778,6 +778,103 @@ func TestList_Search(t *testing.T) {
 	}
 }
 
+// --- Cross-domain orphan tag cleanup ---
+
+// TestPurge_PrunesCalendarOrphans_CrossDomainIsolation verifies that purging a
+// calendar event removes only tags that are exclusively attached to that event.
+// Tags still referenced by a finance transaction, a todo, or a resource must
+// not be deleted (cross-domain isolation).
+func TestPurge_PrunesCalendarOrphans_CrossDomainIsolation(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+	q := store.New(db)
+	svc := calendar.New(db)
+
+	// Upsert three tags: one exclusive to the calendar event, two shared.
+	calOnlyTag, err := q.UpsertTag(ctx, "cal-only")
+	if err != nil {
+		t.Fatalf("UpsertTag cal-only: %v", err)
+	}
+	sharedFinTag, err := q.UpsertTag(ctx, "shared-finance")
+	if err != nil {
+		t.Fatalf("UpsertTag shared-finance: %v", err)
+	}
+	sharedTodoTag, err := q.UpsertTag(ctx, "shared-todo")
+	if err != nil {
+		t.Fatalf("UpsertTag shared-todo: %v", err)
+	}
+
+	// Create a calendar event with all three tags.
+	event, err := svc.Create(ctx, calendar.CreateInput{
+		Title:      "event with tags",
+		StartAt:    "2026-06-15T09:00:00",
+		AllDay:     false,
+		Recurrence: calendar.RecurrenceNone,
+		Tags:       []string{"cal-only", "shared-finance", "shared-todo"},
+	})
+	if err != nil {
+		t.Fatalf("Create calendar event: %v", err)
+	}
+
+	// Create a finance transaction and attach shared-finance tag.
+	fin, err := q.CreateFinanceTransaction(ctx, store.CreateFinanceTransactionParams{
+		Date:       "2026-06-15",
+		Amount:     100,
+		Kind:       "expense",
+		Account:    "bank",
+		Recurrence: "none",
+		Currency:   "USD",
+	})
+	if err != nil {
+		t.Fatalf("CreateFinanceTransaction: %v", err)
+	}
+	if err := q.AttachTagToFinance(ctx, store.AttachTagToFinanceParams{
+		FinanceID: fin.ID,
+		TagID:     sharedFinTag.ID,
+	}); err != nil {
+		t.Fatalf("AttachTagToFinance: %v", err)
+	}
+
+	// Create a todo and attach shared-todo tag.
+	todo, err := q.CreateTodo(ctx, store.CreateTodoParams{
+		Title:      "todo item",
+		Priority:   "med",
+		Status:     "open",
+		Recurrence: "none",
+	})
+	if err != nil {
+		t.Fatalf("CreateTodo: %v", err)
+	}
+	if err := q.AttachTagToTodo(ctx, store.AttachTagToTodoParams{
+		TodoID: todo.ID,
+		TagID:  sharedTodoTag.ID,
+	}); err != nil {
+		t.Fatalf("AttachTagToTodo: %v", err)
+	}
+
+	// Purge the calendar event (also prunes orphan tags).
+	if err := svc.Purge(ctx, event.Row.ID); err != nil {
+		t.Fatalf("Purge: %v", err)
+	}
+
+	// cal-only tag must be gone (orphan pruned).
+	if _, err := q.GetTagByName(ctx, "cal-only"); err == nil {
+		t.Error("expected cal-only tag to be deleted after purge; still exists")
+	}
+
+	// shared-finance tag must still exist (referenced by finance_tags).
+	if _, err := q.GetTagByName(ctx, "shared-finance"); err != nil {
+		t.Errorf("shared-finance tag should still exist after purge: %v", err)
+	}
+
+	// shared-todo tag must still exist (referenced by todo_tags).
+	if _, err := q.GetTagByName(ctx, "shared-todo"); err != nil {
+		t.Errorf("shared-todo tag should still exist after purge: %v", err)
+	}
+
+	_ = calOnlyTag
+}
+
 // --- Helpers ---
 
 func equalStrings(a, b []string) bool {
